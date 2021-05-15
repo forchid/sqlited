@@ -1,0 +1,125 @@
+/*
+ * Copyright (c) 2021 little-pan
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.sqlite.server;
+
+import org.sqlite.server.rmi.RMIServer;
+
+/**
+ * The SQLite daemon.
+ * @since 2020-05-15
+ */
+public class SQLited implements Server {
+
+    final Config config = new Config();
+    private volatile Server server;
+    private volatile boolean stopped;
+
+    public static void main(String[] args) {
+        SQLited server = new SQLited();
+        try {
+            server.parse(args);
+            server.start();
+        } catch (Exception e) {
+            System.err.println("[ERROR] " + e.getMessage());
+            usage(1);
+        }
+    }
+
+    private static void usage(int exitCode) {
+        Config def = new Config();
+        String usage = "Usage: java org.sqlite.server.SQLited [OPTIONS]%n" +
+                "OPTIONS: %n" +
+                "  --help|-?      Show this help message%n" +
+                "  --protocol     <protocol>  Client/server communication protocol, default '%s'%n" +
+                "  --host|-h      <host>      Which host the server listen on, default '%s'%n" +
+                "  --port|-P      <port>      Which port the server listen on, default %d%n" +
+                "  --user|-u      <username>  Which user login the server, default '%s'%n" +
+                "  --password|-p  [password]  The user password%n";
+        System.out.printf(usage, def.protocol, def.host, def.port, def.user);
+        System.exit(exitCode);
+    }
+
+    public void start() throws IllegalStateException {
+        Config config = this.config;
+        if ("rmi".equals(config.protocol)) {
+            this.server = new RMIServer(config);
+            this.server.start();
+        } else {
+            throw new IllegalStateException("Unknown protocol: " + config.protocol);
+        }
+    }
+
+    public void parse(String[] args) throws IllegalArgumentException {
+        int n = args.length;
+        Config config = this.config;
+
+        for (int i = 0; i < n; ++i) {
+            String arg = args[i];
+            if ("--protocol".equals(arg)) {
+                if (++i >= n) {
+                    throw new IllegalArgumentException("No protocol argv");
+                }
+                String p = args[i];
+                if (!p.equals("rmi")) {
+                    throw new IllegalArgumentException("Unknown protocol: " + p);
+                }
+                config.protocol = p;
+            } else if ("--host".equals(arg) || "-h".equals(arg)) {
+                if (++i >= n) {
+                    throw new IllegalArgumentException("No host argv");
+                }
+                config.host = args[i];
+            } else if ("--port".equals(arg) || "-P".equals(arg)) {
+                if (++i >= n) {
+                    throw new IllegalArgumentException("No port argv");
+                }
+                config.port = Integer.decode(args[i]);
+            } else if ("--user".equals(arg) || "-u".equals(arg)) {
+                if (++i >= n) {
+                    throw new IllegalArgumentException("No user argv");
+                }
+                config.user = args[i];
+            } else if ("--password".equals(arg) || "-p".equals(arg)) {
+                if (++i >= n) {
+                    throw new IllegalArgumentException("No password argv");
+                }
+                config.password = args[i];
+            } else if ("--help".equals(arg) || "-?".equals(arg)) {
+                usage(0);
+            } else {
+                throw new IllegalArgumentException("Unknown arg: " + arg);
+            }
+        }
+    }
+
+    public boolean isStopped() {
+        return this.stopped;
+    }
+
+    public void stop() throws IllegalStateException {
+        Server server = this.server;
+        if (server != null) {
+            server.stop();
+            this.stopped = true;
+        }
+    }
+
+    public Config getConfig() {
+        return this.config;
+    }
+
+}

@@ -4,8 +4,8 @@
             http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>org.sqlited</groupId>
-    <artifactId>server</artifactId>
+    <groupId>org.sqlite</groupId>
+    <artifactId>sqlited</artifactId>
     <version>0.0.1</version>
     <name>sqlited</name>
     <description>A SQLite server that supports remote access to SQLite</description>
