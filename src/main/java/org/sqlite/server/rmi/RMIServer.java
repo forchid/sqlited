@@ -20,6 +20,7 @@ import org.sqlite.rmi.RMIDriver;
 import org.sqlite.server.Config;
 import org.sqlite.server.Server;
 import org.sqlite.server.rmi.impl.RMIDriverImpl;
+import org.sqlite.util.logging.LoggerFactory;
 
 import java.io.File;
 import java.rmi.NotBoundException;
@@ -29,7 +30,7 @@ import java.rmi.registry.Registry;
 import java.util.logging.Logger;
 
 public class RMIServer implements Server {
-    static Logger log = Logger.getLogger(RMIServer.class.getSimpleName());
+    static Logger log = LoggerFactory.getLogger(RMIServer.class);
 
     protected final Config config;
     protected volatile Registry registry;

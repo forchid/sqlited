@@ -20,6 +20,7 @@ import org.sqlite.JDBC;
 import org.sqlite.rmi.RMIConnection;
 import org.sqlite.rmi.RMIStatement;
 import org.sqlite.server.util.IoUtils;
+import org.sqlite.util.logging.LoggerFactory;
 
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
@@ -31,7 +32,7 @@ import java.util.logging.Logger;
 
 public class RMIConnectionImpl extends UnicastRemoteObject implements RMIConnection {
 
-    static final Logger log = Logger.getLogger("RMIConn");
+    static final Logger log = LoggerFactory.getLogger(RMIConnectionImpl.class);
 
     protected final Connection sqlConn;
 
