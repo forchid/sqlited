@@ -16,10 +16,12 @@
 
 package org.sqlite.server.rmi;
 
+import org.sqlite.rmi.RMIDriver;
 import org.sqlite.server.Config;
 import org.sqlite.server.Server;
 import org.sqlite.server.rmi.impl.RMIDriverImpl;
 
+import java.io.File;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -28,7 +30,6 @@ import java.util.logging.Logger;
 
 public class RMIServer implements Server {
     static Logger log = Logger.getLogger(RMIServer.class.getSimpleName());
-    static final String NAME = "SQLited";
 
     protected final Config config;
     protected volatile Registry registry;
@@ -45,10 +46,21 @@ public class RMIServer implements Server {
         }
 
         Config config = this.config;
+        File baseDir = new File(config.getBaseDir());
+        if (!baseDir.isDirectory() && !baseDir.mkdirs()) {
+            String s = "Can't make base dir '" + baseDir + "'";
+            throw new IllegalStateException(s);
+        }
+        File dataDir = new File(config.getDataDir());
+        if (!dataDir.isDirectory() && !dataDir.mkdirs()) {
+            String s = "Can't make data dir '" + dataDir + "'";
+            throw new IllegalStateException(s);
+        }
+
         int port = config.getPort();
         try {
             this.registry = LocateRegistry.createRegistry(port);
-            RMIDriver driver = new RMIDriverImpl();
+            RMIDriver driver = new RMIDriverImpl(config);
             this.registry.rebind(NAME, driver);
             String f = "%s v%s listen on %d";
             log.info(() -> String.format(f, NAME, VERSION, port));

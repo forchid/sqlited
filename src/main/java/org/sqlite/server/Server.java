@@ -18,6 +18,7 @@ package org.sqlite.server;
 
 public interface Server {
 
+    String NAME = "SQLited";
     String VERSION = "0.0.1";
 
     void start() throws IllegalStateException;

@@ -18,6 +18,8 @@ package org.sqlite.server;
 
 import org.sqlite.server.rmi.RMIServer;
 
+import java.io.File;
+
 /**
  * The SQLite daemon.
  * @since 2020-05-15
@@ -48,8 +50,10 @@ public class SQLited implements Server {
                 "  --host|-h      <host>      Which host the server listen on, default '%s'%n" +
                 "  --port|-P      <port>      Which port the server listen on, default %d%n" +
                 "  --user|-u      <username>  Which user login the server, default '%s'%n" +
-                "  --password|-p  [password]  The user password%n";
-        System.out.printf(usage, def.protocol, def.host, def.port, def.user);
+                "  --password|-p  [password]  The user password%n" +
+                "  --base-dir     [base-dir]  The server base directory, default '%s'%n" +
+                "  --data-dir     [data-dir]  The server data directory, default '%s'%n";
+        System.out.printf(usage, def.protocol, def.host, def.port, def.user, def.baseDir, def.dataDir);
         System.exit(exitCode);
     }
 
@@ -63,7 +67,7 @@ public class SQLited implements Server {
         }
     }
 
-    public void parse(String[] args) throws IllegalArgumentException {
+    public SQLited parse(String[] args) throws IllegalArgumentException {
         int n = args.length;
         Config config = this.config;
 
@@ -98,12 +102,28 @@ public class SQLited implements Server {
                     throw new IllegalArgumentException("No password argv");
                 }
                 config.password = args[i];
+            } else if ("--base-dir".equals(arg) || "-B".equals(arg)) {
+                if (++i >= n) {
+                    throw new IllegalArgumentException("No base-dir argv");
+                }
+                config.baseDir = args[i];
+            } else if ("--data-dir".equals(arg) || "-D".equals(arg)) {
+                if (++i >= n) {
+                    throw new IllegalArgumentException("No data-dir argv");
+                }
+                config.dataDir = args[i];
             } else if ("--help".equals(arg) || "-?".equals(arg)) {
                 usage(0);
             } else {
                 throw new IllegalArgumentException("Unknown arg: " + arg);
             }
         }
+        String dataDir = config.dataDir;
+        if (!dataDir.startsWith(File.separator)) {
+            config.dataDir = config.baseDir + File.separator + dataDir;
+        }
+
+        return this;
     }
 
     public boolean isStopped() {

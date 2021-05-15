@@ -16,6 +16,8 @@
 
 package org.sqlite.server;
 
+import java.io.File;
+
 public class Config {
 
     String protocol = "rmi";
@@ -23,6 +25,9 @@ public class Config {
     int port = 3515;
     String user = "root";
     String password;
+
+    String baseDir = System.getProperty("user.dir");
+    String dataDir = baseDir + File.separator + "data";
 
     public Config() {
 
@@ -66,6 +71,14 @@ public class Config {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getBaseDir() {
+        return baseDir;
+    }
+
+    public String getDataDir() {
+        return dataDir;
     }
 
 }

@@ -16,7 +16,7 @@
 
 package org.sqlite.server.rmi.impl;
 
-import org.sqlite.server.rmi.RMIResultSetMetaData;
+import org.sqlite.rmi.RMIResultSetMetaData;
 
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;

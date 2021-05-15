@@ -1,4 +1,4 @@
-package org.sqlite.server.rmi;
+package org.sqlite.rmi;
 
 import java.rmi.RemoteException;
 import java.sql.SQLException;
