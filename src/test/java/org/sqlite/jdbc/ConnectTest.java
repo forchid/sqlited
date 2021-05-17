@@ -29,63 +29,64 @@ import static java.sql.DriverManager.*;
 
 public class ConnectTest {
 
+    final String password = "123456";
     final SQLited server = new SQLited();
     {
         this.server.parse(new String[]{
-                "-D", "temp"
+                "-D", "temp", "-p", password
         }).start();
     }
 
     @Test
     public void testConnect() throws Exception {
-        doTestConnect("jdbc:sqlited:");
-        doTestConnect("jdbc:sqlited:?journal_mode=wal");
-        doTestConnect("jdbc:sqlited:test");
-        doTestConnect("jdbc:sqlited:test?journal_mode=wal");
-        doTestConnect("jdbc:sqlited:///test");
-        doTestConnect("jdbc:sqlited:///test?journal_mode=wal");
-        doTestConnect("jdbc:sqlited:///test?journal_mode=wal&foreign_keys=true");
-        doTestConnect("jdbc:sqlited://localhost/test?journal_mode=wal&foreign_keys=true");
-        doTestConnect("jdbc:sqlited://localhost:3515/test?journal_mode=wal&foreign_keys=true");
-        doTestConnect("jdbc:sqlited:rmi:");
-        doTestConnect("jdbc:sqlited:rmi:?journal_mode=wal");
-        doTestConnect("jdbc:sqlited:rmi:test");
-        doTestConnect("jdbc:sqlited:rmi:test?journal_mode=wal");
-        doTestConnect("jdbc:sqlited:rmi:///test");
-        doTestConnect("jdbc:sqlited:rmi:///test?journal_mode=wal");
-        doTestConnect("jdbc:sqlited:rmi:///test?journal_mode=wal&foreign_keys=true");
-        doTestConnect("jdbc:sqlited:rmi://localhost/test?journal_mode=wal&foreign_keys=true");
-        doTestConnect("jdbc:sqlited:rmi://localhost:3515/test?journal_mode=wal&foreign_keys=true");
-        doTestConnect("jdbc:sqlited:rmi://:3515/test?journal_mode=wal&foreign_keys=true");
-        doTestConnect("jdbc:sqlited:rmi://localhost:/test?journal_mode=wal&foreign_keys=true");
-        doTestConnect("jdbc:sqlited:rmi://:/test?journal_mode=wal&foreign_keys=true");
+        doTestConnect("jdbc:sqlited:?password=" + password);
+        doTestConnect("jdbc:sqlited:?journal_mode=wal&password=" + password);
+        doTestConnect("jdbc:sqlited:test?password=" + password);
+        doTestConnect("jdbc:sqlited:test?journal_mode=wal&password=" + password);
+        doTestConnect("jdbc:sqlited:///test?password=" + password);
+        doTestConnect("jdbc:sqlited:///test?journal_mode=wal&password=" + password);
+        doTestConnect("jdbc:sqlited:///test?journal_mode=wal&foreign_keys=true&password=" + password);
+        doTestConnect("jdbc:sqlited://localhost/test?journal_mode=wal&foreign_keys=true&password=" + password);
+        doTestConnect("jdbc:sqlited://localhost:3515/test?journal_mode=wal&foreign_keys=true&password=" + password);
+        doTestConnect("jdbc:sqlited:rmi:?password=" + password);
+        doTestConnect("jdbc:sqlited:rmi:?journal_mode=wal&password=" + password);
+        doTestConnect("jdbc:sqlited:rmi:test?password=" + password);
+        doTestConnect("jdbc:sqlited:rmi:test?journal_mode=wal&password=" + password);
+        doTestConnect("jdbc:sqlited:rmi:///test?password=" + password);
+        doTestConnect("jdbc:sqlited:rmi:///test?journal_mode=wal&password=" + password);
+        doTestConnect("jdbc:sqlited:rmi:///test?journal_mode=wal&foreign_keys=true&password=" + password);
+        doTestConnect("jdbc:sqlited:rmi://localhost/test?journal_mode=wal&foreign_keys=true&password=" + password);
+        doTestConnect("jdbc:sqlited:rmi://localhost:3515/test?journal_mode=wal&foreign_keys=true&password=" + password);
+        doTestConnect("jdbc:sqlited:rmi://:3515/test?journal_mode=wal&foreign_keys=true&password=" + password);
+        doTestConnect("jdbc:sqlited:rmi://localhost:/test?journal_mode=wal&foreign_keys=true&password=" + password);
+        doTestConnect("jdbc:sqlited:rmi://:/test?journal_mode=wal&foreign_keys=true&password=" + password);
 
         try {
-            doTestConnect("jdbc:sqlited:///test?a");
+            doTestConnect("jdbc:sqlited:///test?a&password=" + password);
             fail();
         } catch (SQLException e) {
             // OK
         }
         try {
-            doTestConnect("jdbc:sqlited://test");
+            doTestConnect("jdbc:sqlited://test?password=" + password);
             fail();
         } catch (SQLException e) {
             // OK
         }
         try {
-            doTestConnect("jdbc:sqlited:/test");
+            doTestConnect("jdbc:sqlited:/test?password=" + password);
             fail();
         } catch (SQLException e) {
             // OK
         }
         try {
-            doTestConnect("jdbc:sqlited:test?a");
+            doTestConnect("jdbc:sqlited:test?a&password=" + password);
             fail();
         } catch (SQLException e) {
             // OK
         }
         try {
-            doTestConnect("jdbc:sqlited:?a");
+            doTestConnect("jdbc:sqlited:?a&password=" + password);
             fail();
         } catch (SQLException e) {
             // OK

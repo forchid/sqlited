@@ -19,6 +19,7 @@ package org.sqlite.jdbc.rmi;
 import org.sqlite.jdbc.adapter.DriverAdapter;
 import org.sqlite.jdbc.rmi.impl.JdbcRMIConnection;
 import org.sqlite.jdbc.rmi.util.RMIUtils;
+import org.sqlite.rmi.AuthSocketFactory;
 import org.sqlite.rmi.RMIConnection;
 import org.sqlite.rmi.RMIDriver;
 import org.sqlite.server.util.IoUtils;
@@ -27,6 +28,7 @@ import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.rmi.server.RMISocketFactory;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -81,7 +83,7 @@ public class JdbcRMIDriver extends DriverAdapter {
             }
         }
 
-        String user = info.getProperty("user");
+        String user = info.getProperty("user", "root");
         String password = info.getProperty("password");
         info.remove("user");
         info.remove("password");
@@ -114,8 +116,14 @@ public class JdbcRMIDriver extends DriverAdapter {
         }
 
         // Do connect
+        Properties props = new Properties();
+        props.put("user", user);
+        if (password != null) {
+            props.setProperty("password", password);
+        }
+        RMISocketFactory socketFactory = new AuthSocketFactory(props);
         try {
-            Registry registry = LocateRegistry.getRegistry(host, port);
+            Registry registry = LocateRegistry.getRegistry(host, port, socketFactory);
             RMIDriver rmiDriver = (RMIDriver) registry.lookup("SQLited");
             RMIConnection rmiConn = rmiDriver.connect(url, info);
             boolean failed = true;

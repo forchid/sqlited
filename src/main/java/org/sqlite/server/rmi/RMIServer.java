@@ -16,6 +16,7 @@
 
 package org.sqlite.server.rmi;
 
+import org.sqlite.rmi.AuthSocketFactory;
 import org.sqlite.rmi.RMIDriver;
 import org.sqlite.server.Config;
 import org.sqlite.server.Server;
@@ -27,6 +28,8 @@ import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.rmi.server.RMISocketFactory;
+import java.util.Properties;
 import java.util.logging.Logger;
 
 public class RMIServer implements Server {
@@ -60,7 +63,14 @@ public class RMIServer implements Server {
 
         int port = config.getPort();
         try {
-            this.registry = LocateRegistry.createRegistry(port);
+            Properties props = new Properties();
+            props.setProperty("user", config.getUser());
+            String password = config.getPassword();
+            if (password != null) {
+                props.setProperty("password", password);
+            }
+            RMISocketFactory socketFactory = new AuthSocketFactory(props);
+            this.registry = LocateRegistry.createRegistry(port, socketFactory, socketFactory);
             RMIDriver driver = new RMIDriverImpl(config);
             this.registry.rebind(NAME, driver);
             String f = "%s v%s listen on %d";

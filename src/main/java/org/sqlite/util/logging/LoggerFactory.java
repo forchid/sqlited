@@ -45,7 +45,6 @@ public final class LoggerFactory {
     private LoggerFactory() {}
 
     public static Logger getLogger(Class<?> clazz) {
-        System.out.println(clazz.getName());
         return Logger.getLogger(clazz.getName());
     }
 
