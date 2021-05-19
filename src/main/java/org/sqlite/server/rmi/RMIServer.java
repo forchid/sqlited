@@ -16,19 +16,21 @@
 
 package org.sqlite.server.rmi;
 
+import org.sqlite.rmi.AuthServerSocketFactory;
 import org.sqlite.rmi.AuthSocketFactory;
-import org.sqlite.rmi.RMIDriver;
 import org.sqlite.server.Config;
 import org.sqlite.server.Server;
 import org.sqlite.server.rmi.impl.RMIDriverImpl;
 import org.sqlite.util.logging.LoggerFactory;
 
+import static java.lang.Thread.*;
 import java.io.File;
 import java.rmi.NotBoundException;
+import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-import java.rmi.server.RMISocketFactory;
+import java.rmi.server.*;
 import java.util.Properties;
 import java.util.logging.Logger;
 
@@ -62,19 +64,19 @@ public class RMIServer implements Server {
         }
 
         int port = config.getPort();
+        Properties props = config.getAuthProperties();
+        RMIServerSocketFactory serverFactory = new AuthServerSocketFactory(props);
+        RMIClientSocketFactory clientFactory = new AuthSocketFactory();
+        config.setRMIServerSocketFactory(serverFactory);
+        config.setRMIClientSocketFactory(clientFactory);
         try {
-            Properties props = new Properties();
-            props.setProperty("user", config.getUser());
-            String password = config.getPassword();
-            if (password != null) {
-                props.setProperty("password", password);
-            }
-            RMISocketFactory socketFactory = new AuthSocketFactory(props);
-            this.registry = LocateRegistry.createRegistry(port, socketFactory, socketFactory);
-            RMIDriver driver = new RMIDriverImpl(config);
+            log.fine(() -> String.format("%s: create a registry", currentThread().getName()));
+            this.registry = LocateRegistry.createRegistry(port, clientFactory, serverFactory);
+            Remote driver = new RMIDriverImpl(config);
+            log.fine(() -> String.format("%s: rebind the driver", currentThread().getName()));
             this.registry.rebind(NAME, driver);
-            String f = "%s v%s listen on %d";
-            log.info(() -> String.format(f, NAME, VERSION, port));
+            String f = "%s: %s v%s listen on %d";
+            log.info(() -> String.format(f, currentThread().getName(), NAME, VERSION, port));
         } catch (RemoteException e) {
             throw new IllegalStateException(e);
         }

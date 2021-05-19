@@ -20,45 +20,47 @@ import org.sqlite.jdbc.adapter.ResultSetAdapter;
 import static org.sqlite.jdbc.rmi.util.RMIUtils.*;
 import org.sqlite.rmi.RMIResultSet;
 import org.sqlite.rmi.RMIResultSetMetaData;
-import org.sqlite.server.util.IoUtils;
+import org.sqlite.util.IOUtils;
 
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 
 public class JdbcRMIResultSet extends ResultSetAdapter {
 
+    protected final JdbcRMIConnection conn;
     protected final RMIResultSet rmiRs;
 
-    public JdbcRMIResultSet(RMIResultSet rmiRs) {
+    public JdbcRMIResultSet(JdbcRMIConnection conn, RMIResultSet rmiRs) {
+        this.conn = conn;
         this.rmiRs = rmiRs;
     }
 
     @Override
     public boolean next() throws SQLException {
-        return invoke(this.rmiRs::next);
+        return invoke(this.rmiRs::next, this.conn.props);
     }
 
     @Override
     public int getInt(String columnLabel) throws SQLException {
-        return invoke(() -> this.rmiRs.getInt(columnLabel));
+        return invoke(() -> this.rmiRs.getInt(columnLabel), this.conn.props);
     }
 
     @Override
     public String getString(String columnLabel) throws SQLException {
-        return invoke(() -> this.rmiRs.getString(columnLabel));
+        return invoke(() -> this.rmiRs.getString(columnLabel), this.conn.props);
     }
 
     @Override
     public ResultSetMetaData getMetaData() throws SQLException {
         return invoke(() -> {
             RMIResultSetMetaData metaData = this.rmiRs.getMetaData();
-            return new JdbcRMIResultSetMetaData(metaData);
-        });
+            return new JdbcRMIResultSetMetaData(this.conn, metaData);
+        }, this.conn.props);
     }
 
     @Override
     public void close() {
-        IoUtils.close(this.rmiRs);
+        IOUtils.close(this.rmiRs);
     }
 
 }

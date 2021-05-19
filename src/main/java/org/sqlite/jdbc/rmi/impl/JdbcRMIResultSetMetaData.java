@@ -24,30 +24,32 @@ import java.sql.SQLException;
 
 public class JdbcRMIResultSetMetaData extends ResultSetMetaDataAdapter {
 
+    protected final JdbcRMIConnection conn;
     protected final RMIResultSetMetaData rmiMetaData;
 
-    public JdbcRMIResultSetMetaData(RMIResultSetMetaData rmiMetaData) {
+    public JdbcRMIResultSetMetaData(JdbcRMIConnection conn, RMIResultSetMetaData rmiMetaData) {
+        this.conn = conn;
         this.rmiMetaData = rmiMetaData;
     }
 
     @Override
     public int getColumnCount() throws SQLException {
-        return invoke(this.rmiMetaData::getColumnCount);
+        return invoke(this.rmiMetaData::getColumnCount, this.conn.props);
     }
 
     @Override
     public String getColumnName(int columnIndex) throws SQLException {
-        return invoke(() -> this.rmiMetaData.getColumnName(columnIndex));
+        return invoke(() -> this.rmiMetaData.getColumnName(columnIndex), this.conn.props);
     }
 
     @Override
     public int getColumnType(int columnIndex) throws SQLException {
-        return invoke(() -> this.rmiMetaData.getColumnType(columnIndex));
+        return invoke(() -> this.rmiMetaData.getColumnType(columnIndex), this.conn.props);
     }
 
     @Override
     public int getColumnDisplaySize(int columnIndex) throws SQLException {
-        return invoke(() -> this.rmiMetaData.getColumnDisplaySize(columnIndex));
+        return invoke(() -> this.rmiMetaData.getColumnDisplaySize(columnIndex), this.conn.props);
     }
 
 }

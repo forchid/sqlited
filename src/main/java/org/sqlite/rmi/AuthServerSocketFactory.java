@@ -18,46 +18,47 @@ package org.sqlite.rmi;
 
 import org.sqlite.rmi.util.SocketUtils;
 
-import java.io.*;
-import java.net.*;
-
-import java.rmi.server.RMIClientSocketFactory;
-import java.util.concurrent.atomic.AtomicLong;
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.rmi.server.RMIServerSocketFactory;
+import java.util.Properties;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * RMI socket factory with authentication.
+ * RMI serverSocket factory with authentication.
  *
  * @threadsafe
  */
-public class AuthSocketFactory implements RMIClientSocketFactory, Serializable {
+public class AuthServerSocketFactory implements RMIServerSocketFactory {
 
-    private static final long serialVersionUID = 1L;
-    private static final AtomicLong ID = new AtomicLong();
+    private static final AtomicInteger ID = new AtomicInteger();
 
-    protected final long id;
+    protected final int id;
+    private final Properties props;
 
-    public AuthSocketFactory() {
+    public AuthServerSocketFactory(Properties props) {
+        this.props = SocketUtils.defaultConfig(props);
         this.id = nextId();
     }
 
-    protected static long nextId() {
+    protected static int nextId() {
         return ID.incrementAndGet();
     }
 
     @Override
-    public Socket createSocket(String host, int port) throws IOException {
-        return SocketUtils.createSocket(host, port);
+    public ServerSocket createServerSocket(int port) throws IOException {
+        return SocketUtils.createServerSocket(this.props, port);
     }
 
     @Override
     public int hashCode() {
-        return (int)this.id;
+        return this.id;
     }
 
     @Override
     public boolean equals(Object o) {
-        if (o instanceof AuthSocketFactory) {
-            AuthSocketFactory f = (AuthSocketFactory)o;
+        if (o instanceof AuthServerSocketFactory) {
+            AuthServerSocketFactory f = (AuthServerSocketFactory)o;
             return f.id == this.id;
         } else {
             return false;

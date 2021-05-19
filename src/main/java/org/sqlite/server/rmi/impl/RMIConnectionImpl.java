@@ -19,7 +19,8 @@ package org.sqlite.server.rmi.impl;
 import org.sqlite.JDBC;
 import org.sqlite.rmi.RMIConnection;
 import org.sqlite.rmi.RMIStatement;
-import org.sqlite.server.util.IoUtils;
+import org.sqlite.server.Config;
+import org.sqlite.util.IOUtils;
 import org.sqlite.util.logging.LoggerFactory;
 
 import java.rmi.RemoteException;
@@ -34,12 +35,16 @@ public class RMIConnectionImpl extends UnicastRemoteObject implements RMIConnect
 
     static final Logger log = LoggerFactory.getLogger(RMIConnectionImpl.class);
 
+    protected final Config config;
     protected final Connection sqlConn;
 
-    protected RMIConnectionImpl(String url, Properties info)
+    protected RMIConnectionImpl(Config config, String url, Properties info)
             throws RemoteException, SQLException {
+        super(config.getPort(), config.getRMIClientSocketFactory(),
+                config.getRMIServerSocketFactory());
         log.fine(() -> String.format("Open DB '%s'", url));
         this.sqlConn = JDBC.createConnection(url, info);
+        this.config  = config;
     }
 
     @Override
@@ -47,17 +52,17 @@ public class RMIConnectionImpl extends UnicastRemoteObject implements RMIConnect
         Statement stmt = this.sqlConn.createStatement();
         boolean failed = true;
         try {
-            RMIStatement s = new RMIStatementImpl(stmt);
+            RMIStatement s = new RMIStatementImpl(this, stmt);
             failed = false;
             return s;
         } finally {
-            if (failed) IoUtils.close(stmt);
+            if (failed) IOUtils.close(stmt);
         }
     }
 
     @Override
     public void close() throws RemoteException {
-        IoUtils.close(this.sqlConn);
+        IOUtils.close(this.sqlConn);
     }
 
 }

@@ -32,12 +32,15 @@ public class RMIDriverImpl extends UnicastRemoteObject implements RMIDriver {
     protected final Config config;
 
     public RMIDriverImpl(Config config) throws RemoteException {
+        super(config.getPort(), config.getRMIClientSocketFactory(),
+                config.getRMIServerSocketFactory());
         this.config = config;
     }
 
     @Override
     public RMIConnection connect(String url, Properties info)
             throws RemoteException, SQLException {
+        Config config = this.config;
         String db = url;
         int i = url.indexOf('?');
 
@@ -51,7 +54,7 @@ public class RMIDriverImpl extends UnicastRemoteObject implements RMIDriver {
             url = JDBC.PREFIX + url;
         }
 
-        return new RMIConnectionImpl(url, info);
+        return new RMIConnectionImpl(config, url, info);
     }
 
 }

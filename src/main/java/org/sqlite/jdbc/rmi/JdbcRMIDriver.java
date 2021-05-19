@@ -22,21 +22,26 @@ import org.sqlite.jdbc.rmi.util.RMIUtils;
 import org.sqlite.rmi.AuthSocketFactory;
 import org.sqlite.rmi.RMIConnection;
 import org.sqlite.rmi.RMIDriver;
-import org.sqlite.server.util.IoUtils;
+import org.sqlite.rmi.util.SocketUtils;
+import org.sqlite.util.IOUtils;
+import org.sqlite.util.logging.LoggerFactory;
 
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-import java.rmi.server.RMISocketFactory;
+import java.rmi.server.RMIClientSocketFactory;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.logging.Logger;
 
 public class JdbcRMIDriver extends DriverAdapter {
+    static final Logger log = LoggerFactory.getLogger(JdbcRMIDriver.class);
 
+    static final RMIClientSocketFactory SO_FACTORY = new AuthSocketFactory();
     public static final String PREFIX = DriverAdapter.PREFIX + "rmi:";
 
     @Override
@@ -45,6 +50,10 @@ public class JdbcRMIDriver extends DriverAdapter {
         if (!isValidURL(url)) {
             return null;
         }
+        // Make a copy
+        Properties copy = new Properties();
+        copy.putAll(info);
+        info = copy;
 
         // Parse url
         // jdbc:sqlited:[rmi:][//[HOST][:PORT]/][DB][?a=b&...]
@@ -83,7 +92,7 @@ public class JdbcRMIDriver extends DriverAdapter {
             }
         }
 
-        String user = info.getProperty("user", "root");
+        String user = info.getProperty("user", DEFAULT_USER);
         String password = info.getProperty("password");
         info.remove("user");
         info.remove("password");
@@ -116,26 +125,34 @@ public class JdbcRMIDriver extends DriverAdapter {
         }
 
         // Do connect
-        Properties props = new Properties();
+        final Properties props = new Properties();
         props.put("user", user);
         if (password != null) {
             props.setProperty("password", password);
         }
-        RMISocketFactory socketFactory = new AuthSocketFactory(props);
         try {
-            Registry registry = LocateRegistry.getRegistry(host, port, socketFactory);
+            SocketUtils.attachProperties(props);
+            log.fine(() -> String.format("%s: locate remote registry",
+                    Thread.currentThread().getName()));
+            Registry registry = LocateRegistry.getRegistry(host, port, SO_FACTORY);
+            log.fine(() -> String.format("%s: lookup remote driver",
+                    Thread.currentThread().getName()));
             RMIDriver rmiDriver = (RMIDriver) registry.lookup("SQLited");
+            log.fine(() -> String.format("%s: get a remote connection",
+                    Thread.currentThread().getName()));
             RMIConnection rmiConn = rmiDriver.connect(url, info);
             boolean failed = true;
             try {
-                Connection c = new JdbcRMIConnection(rmiConn);
+                Connection c = new JdbcRMIConnection(props, rmiConn);
                 failed = false;
                 return c;
             } finally {
-                if (failed) IoUtils.close(rmiConn);
+                if (failed) IOUtils.close(rmiConn);
             }
         } catch (NotBoundException | RemoteException e) {
             throw RMIUtils.wrap(e);
+        } finally {
+            SocketUtils.detachProperties();
         }
     }
 

@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package org.sqlite.server.util;
+package org.sqlite.util;
 
-public final class IoUtils {
+public final class IOUtils {
 
-    private IoUtils() {}
+    private IOUtils() {}
 
     public static void close(AutoCloseable closeable) {
         if (closeable != null) {

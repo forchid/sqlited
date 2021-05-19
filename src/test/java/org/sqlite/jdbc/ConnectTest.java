@@ -23,11 +23,21 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import static junit.framework.TestCase.*;
 
 import static java.sql.DriverManager.*;
 
 public class ConnectTest {
+
+    static final AtomicInteger ID = new AtomicInteger();
 
     final String password = "123456";
     final SQLited server = new SQLited();
@@ -39,8 +49,27 @@ public class ConnectTest {
 
     @Test
     public void testConnect() throws Exception {
+        // Incorrect user or password
+        try {
+            doTestConnect("jdbc:sqlited:?user=test&password=" + password);
+            fail();
+        } catch (SQLException e) {
+            // OK
+        }
+        try {
+            doTestConnect("jdbc:sqlited:?password=" + password + "x");
+            fail();
+        } catch (SQLException e) {
+            // OK
+        }
+
+        // temp database
         doTestConnect("jdbc:sqlited:?password=" + password);
         doTestConnect("jdbc:sqlited:?journal_mode=wal&password=" + password);
+        // memory database
+        doTestConnect("jdbc:sqlited::memory:?password=" + password);
+        doTestConnect("jdbc:sqlited::memory:?journal_mode=wal&password=" + password);
+        // file database
         doTestConnect("jdbc:sqlited:test?password=" + password);
         doTestConnect("jdbc:sqlited:test?journal_mode=wal&password=" + password);
         doTestConnect("jdbc:sqlited:///test?password=" + password);
@@ -61,6 +90,14 @@ public class ConnectTest {
         doTestConnect("jdbc:sqlited:rmi://localhost:/test?journal_mode=wal&foreign_keys=true&password=" + password);
         doTestConnect("jdbc:sqlited:rmi://:/test?journal_mode=wal&foreign_keys=true&password=" + password);
 
+        // Multi-thread test
+        doTestConnect("jdbc:sqlited:///test?password=" + password, 2);
+        doTestConnect("jdbc:sqlited:///test?password=" + password, 5);
+        doTestConnect("jdbc:sqlited:///test?password=" + password, 10);
+        doTestConnect("jdbc:sqlited:///test?password=" + password, 50);
+        doTestConnect("jdbc:sqlited:///test?password=" + password, 150);
+
+        // Exception test
         try {
             doTestConnect("jdbc:sqlited:///test?a&password=" + password);
             fail();
@@ -91,19 +128,63 @@ public class ConnectTest {
         } catch (SQLException e) {
             // OK
         }
+
+        // Incorrect port test
+        try {
+            doTestConnect("jdbc:sqlited://:3516/?user=test&password=" + password);
+            fail();
+        } catch (SQLException e) {
+            // OK
+        }
+        try {
+            doTestConnect("jdbc:sqlited://localhost:3516/?password=" + password + "x");
+            fail();
+        } catch (SQLException e) {
+            // OK
+        }
     }
 
     void doTestConnect(String url) throws Exception {
-        try (Connection c = getConnection(url);
-             Statement s = c.createStatement()) {
-            ResultSet rs = s.executeQuery("select 1");
-            assertTrue(rs.next());
-            assertEquals(1, rs.getInt("1"));
-            rs.close();
-            s.executeUpdate("create table if not exists account(" +
-                    "id int not null primary key, " +
-                    "name varchar(20) not null, " +
-                    "balance decimal(12,1) not null default 0)");
+        doTestConnect(url, 1);
+    }
+
+    void doTestConnect(String url, int threads) throws Exception {
+        Callable<Void> callable = () -> {
+            try (Connection c = getConnection(url);
+                 Statement s = c.createStatement()) {
+                ResultSet rs = s.executeQuery("select 1");
+                assertTrue(rs.next());
+                assertEquals(1, rs.getInt("1"));
+                rs.close();
+                s.executeUpdate("create table if not exists account(" +
+                        "id int not null primary key, " +
+                        "name varchar(20) not null, " +
+                        "balance decimal(12,1) not null default 0)");
+            }
+            return null;
+        };
+
+        if (threads <= 1) {
+            callable.call();
+        } else {
+            ExecutorService executors = Executors.newFixedThreadPool(threads, r -> {
+               Thread t = new Thread(r);
+               t.setName("ConnectTest-" + ID.incrementAndGet());
+               t.setDaemon(true);
+               return t;
+            });
+            try {
+                List<Future<?>> futures = new ArrayList<>(threads);
+                for (int i = 0; i < threads; ++i) {
+                    Future<?> f = executors.submit(callable);
+                    futures.add(f);
+                }
+                for (Future<?> f : futures) {
+                    f.get();
+                }
+            } finally {
+                executors.shutdown();
+            }
         }
     }
 

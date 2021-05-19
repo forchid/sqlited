@@ -16,18 +16,45 @@
 
 package org.sqlite.server;
 
+import org.sqlite.util.logging.LoggerFactory;
+
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.rmi.server.RMIClientSocketFactory;
+import java.rmi.server.RMIServerSocketFactory;
+import java.util.Properties;
+import java.util.logging.Logger;
 
-public class Config {
+public class Config implements Cloneable {
+    static final Logger log = LoggerFactory.getLogger(Config.class);
+    private static final Properties DEFAULT = new Properties();
+    private static final String CONFIG_FILE = "config.properties";
 
-    String protocol = "rmi";
-    String host = "localhost";
-    int port = 3515;
-    String user = "root";
-    String password;
+    static {
+        ClassLoader loader = Thread.currentThread().getContextClassLoader();
+        try (InputStream in = loader.getResourceAsStream(CONFIG_FILE)) {
+            String f = "Load config file '%s' from classpath";
+            log.info(() -> String.format(f, CONFIG_FILE));
+            if (in != null) {
+                DEFAULT.load(in);
+            }
+        } catch (IOException e) {
+            throw new ExceptionInInitializerError(e);
+        }
+    }
 
-    String baseDir = System.getProperty("user.dir");
-    String dataDir = baseDir + File.separator + "data";
+    String protocol = DEFAULT.getProperty("protocol", "rmi");
+    String host = DEFAULT.getProperty("host", "localhost");
+    int port = Integer.decode(DEFAULT.getProperty("port", "3515"));
+    String user = DEFAULT.getProperty("user", "root");
+    String password = DEFAULT.getProperty("password");
+
+    String baseDir = DEFAULT.getProperty("baseDir", System.getProperty("user.dir"));
+    String dataDir = DEFAULT.getProperty("dataDir", this.baseDir + File.separator + "data");
+
+    RMIServerSocketFactory rmiServerSocketFactory;
+    RMIClientSocketFactory rmiClientSocketFactory;
 
     public Config() {
 
@@ -37,40 +64,20 @@ public class Config {
         return protocol;
     }
 
-    public void setProtocol(String protocol) {
-        this.protocol = protocol;
-    }
-
     public String getHost() {
         return host;
-    }
-
-    public void setHost(String host) {
-        this.host = host;
     }
 
     public int getPort() {
         return port;
     }
 
-    public void setPort(int port) {
-        this.port = port;
-    }
-
     public String getUser() {
         return user;
     }
 
-    public void setUser(String user) {
-        this.user = user;
-    }
-
     public String getPassword() {
         return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
     }
 
     public String getBaseDir() {
@@ -79,6 +86,49 @@ public class Config {
 
     public String getDataDir() {
         return dataDir;
+    }
+
+    public Properties getAuthProperties() {
+        final Properties props = new Properties();
+
+        props.setProperty("host", this.host);
+        props.setProperty("user", this.user);
+        if (this.password != null) {
+            props.setProperty("password", this.password);
+        }
+
+        return props;
+    }
+
+    public RMIServerSocketFactory getRMIServerSocketFactory() {
+        return this.rmiServerSocketFactory;
+    }
+
+    public void setRMIServerSocketFactory(RMIServerSocketFactory rmiServerSocketFactory) {
+        this.rmiServerSocketFactory = rmiServerSocketFactory;
+    }
+
+    public RMIClientSocketFactory getRMIClientSocketFactory() {
+        return this.rmiClientSocketFactory;
+    }
+
+    public void setRMIClientSocketFactory(RMIClientSocketFactory rmiClientSocketFactory) {
+        this.rmiClientSocketFactory = rmiClientSocketFactory;
+    }
+
+    @Override
+    public Config clone() {
+        Config copy = new Config();
+        copy.baseDir = this.baseDir;
+        copy.dataDir = this.dataDir;
+        copy.host = this.host;
+        copy.password = this.password;
+        copy.port = this.port;
+        copy.protocol = this.protocol;
+        copy.user = this.user;
+        copy.rmiClientSocketFactory = this.rmiClientSocketFactory;
+        copy.rmiServerSocketFactory = this.rmiServerSocketFactory;
+        return copy;
     }
 
 }

@@ -19,7 +19,7 @@ package org.sqlite.jdbc.rmi.impl;
 import org.sqlite.jdbc.adapter.StatementAdapter;
 import org.sqlite.rmi.RMIResultSet;
 import org.sqlite.rmi.RMIStatement;
-import org.sqlite.server.util.IoUtils;
+import org.sqlite.util.IOUtils;
 import static org.sqlite.jdbc.rmi.util.RMIUtils.*;
 
 import java.sql.ResultSet;
@@ -27,9 +27,11 @@ import java.sql.SQLException;
 
 public class JdbcRMIStatement extends StatementAdapter {
 
+    protected final JdbcRMIConnection conn;
     protected final RMIStatement rmiStmt;
 
-    public JdbcRMIStatement(RMIStatement rmiStmt) {
+    public JdbcRMIStatement(JdbcRMIConnection conn, RMIStatement rmiStmt) {
+        this.conn = conn;
         this.rmiStmt = rmiStmt;
     }
 
@@ -40,23 +42,23 @@ public class JdbcRMIStatement extends StatementAdapter {
             boolean failed = true;
             try {
                 rs = this.rmiStmt.executeQuery(sql);
-                ResultSet r = new JdbcRMIResultSet(rs);
+                ResultSet r = new JdbcRMIResultSet(this.conn, rs);
                 failed = false;
                 return r;
             } finally {
-                if (failed) IoUtils.close(rs);
+                if (failed) IOUtils.close(rs);
             }
-        });
+        }, this.conn.props);
     }
 
     @Override
     public int executeUpdate(String sql) throws SQLException {
-        return invoke(() -> this.rmiStmt.executeUpdate(sql));
+        return invoke(() -> this.rmiStmt.executeUpdate(sql), this.conn.props);
     }
 
     @Override
     public void close() {
-        IoUtils.close(this.rmiStmt);
+        IOUtils.close(this.rmiStmt);
     }
 
 }

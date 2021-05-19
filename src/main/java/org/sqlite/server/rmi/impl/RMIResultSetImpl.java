@@ -18,19 +18,20 @@ package org.sqlite.server.rmi.impl;
 
 import org.sqlite.rmi.RMIResultSetMetaData;
 import org.sqlite.rmi.RMIResultSet;
-import org.sqlite.server.util.IoUtils;
+import org.sqlite.util.IOUtils;
 
 import java.rmi.RemoteException;
-import java.rmi.server.UnicastRemoteObject;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 
-public class RMIResultSetImpl extends UnicastRemoteObject implements RMIResultSet {
+public class RMIResultSetImpl extends ConnRemoteObject implements RMIResultSet {
 
     protected final ResultSet rs;
 
-    protected RMIResultSetImpl(ResultSet rs) throws RemoteException {
+    protected RMIResultSetImpl(RMIConnectionImpl conn, ResultSet rs)
+            throws RemoteException {
+        super(conn);
         this.rs = rs;
     }
 
@@ -52,12 +53,12 @@ public class RMIResultSetImpl extends UnicastRemoteObject implements RMIResultSe
     @Override
     public RMIResultSetMetaData getMetaData() throws RemoteException, SQLException {
         ResultSetMetaData metaData = this.rs.getMetaData();
-        return new RMIResultSetMetaDataImpl(metaData);
+        return new RMIResultSetMetaDataImpl(super.conn, metaData);
     }
 
     @Override
     public void close() throws RemoteException {
-        IoUtils.close(this.rs);
+        IOUtils.close(this.rs);
     }
 
 }

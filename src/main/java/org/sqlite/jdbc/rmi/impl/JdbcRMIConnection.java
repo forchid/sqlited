@@ -20,16 +20,19 @@ import org.sqlite.jdbc.adapter.ConnectionAdapter;
 import static org.sqlite.jdbc.rmi.util.RMIUtils.*;
 import org.sqlite.rmi.RMIConnection;
 import org.sqlite.rmi.RMIStatement;
-import org.sqlite.server.util.IoUtils;
+import org.sqlite.util.IOUtils;
 
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Properties;
 
 public class JdbcRMIConnection extends ConnectionAdapter {
 
+    protected final Properties props;
     protected final RMIConnection rmiConn;
 
-    public JdbcRMIConnection(RMIConnection rmiConn) {
+    public JdbcRMIConnection(Properties props, RMIConnection rmiConn) {
+        this.props = props;
         this.rmiConn = rmiConn;
     }
 
@@ -40,18 +43,18 @@ public class JdbcRMIConnection extends ConnectionAdapter {
             boolean failed = true;
             try {
                 stmt = this.rmiConn.createStatement();
-                Statement s = new JdbcRMIStatement(stmt);
+                Statement s = new JdbcRMIStatement(this, stmt);
                 failed = false;
                 return s;
             } finally {
-                if (failed) IoUtils.close(stmt);
+                if (failed) IOUtils.close(stmt);
             }
-        });
+        }, this.props);
     }
 
     @Override
     public void close() {
-        IoUtils.close(this.rmiConn);
+        IOUtils.close(this.rmiConn);
     }
 
 }

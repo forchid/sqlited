@@ -18,19 +18,20 @@ package org.sqlite.server.rmi.impl;
 
 import org.sqlite.rmi.RMIResultSet;
 import org.sqlite.rmi.RMIStatement;
-import org.sqlite.server.util.IoUtils;
+import org.sqlite.util.IOUtils;
 
 import java.rmi.RemoteException;
-import java.rmi.server.UnicastRemoteObject;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-public class RMIStatementImpl extends UnicastRemoteObject implements RMIStatement {
+public class RMIStatementImpl extends ConnRemoteObject implements RMIStatement {
 
     protected final Statement stmt;
 
-    protected RMIStatementImpl(Statement stmt) throws RemoteException {
+    protected RMIStatementImpl(RMIConnectionImpl conn, Statement stmt)
+            throws RemoteException {
+        super(conn);
         this.stmt = stmt;
     }
 
@@ -40,11 +41,11 @@ public class RMIStatementImpl extends UnicastRemoteObject implements RMIStatemen
         ResultSet rs = this.stmt.executeQuery(s);
         boolean failed = true;
         try {
-            RMIResultSet r = new RMIResultSetImpl(rs);
+            RMIResultSet r = new RMIResultSetImpl(this.conn, rs);
             failed = false;
             return r;
         } finally {
-            if (failed) IoUtils.close(rs);
+            if (failed) IOUtils.close(rs);
         }
     }
 
@@ -56,7 +57,7 @@ public class RMIStatementImpl extends UnicastRemoteObject implements RMIStatemen
 
     @Override
     public void close() throws RemoteException {
-        IoUtils.close(this.stmt);
+        IOUtils.close(this.stmt);
     }
 
 }

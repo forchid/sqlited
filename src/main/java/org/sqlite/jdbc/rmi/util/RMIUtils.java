@@ -16,10 +16,13 @@
 
 package org.sqlite.jdbc.rmi.util;
 
+import org.sqlite.rmi.util.SocketUtils;
+
 import java.rmi.ConnectException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.sql.SQLException;
+import java.util.Properties;
 
 public final class RMIUtils {
 
@@ -34,11 +37,14 @@ public final class RMIUtils {
         }
     }
 
-    public static <R> R invoke(RMIMethod<R> m) throws SQLException {
+    public static <R> R invoke(RMIMethod<R> m, Properties props) throws SQLException {
+        SocketUtils.attachProperties(props);
         try {
             return m.invoke();
         } catch (RemoteException | NotBoundException e) {
             throw RMIUtils.wrap(e);
+        } finally {
+            SocketUtils.detachProperties();
         }
     }
 
