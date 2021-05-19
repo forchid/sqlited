@@ -23,6 +23,7 @@ import static org.sqlite.rmi.util.SocketUtils.*;
 
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketAddress;
 import java.security.MessageDigest;
 import java.util.Map;
 import java.util.Properties;
@@ -37,16 +38,30 @@ public class AuthSocket extends Socket {
     private static final AtomicLong ID = new AtomicLong();
 
     protected final long id;
+    protected final Properties props;
 
-    public AuthSocket(Properties props, String host, int port) throws IOException {
-        super(host, port);
+    public AuthSocket(Properties props) {
+        this.props = props;
+        this.id = nextId();
+        log.fine(() -> String.format("%s: Create socket#%d",
+                Thread.currentThread().getName(), this.id));
+    }
 
+    @Override
+    public void connect(SocketAddress endpoint) throws IOException {
+        this.connect(endpoint, 0);
+    }
+
+    @Override
+    public void connect(SocketAddress endpoint, int timeout) throws IOException {
+        String readTimeout;
         boolean failed = true;
         try {
-            this.id = nextId();
-            login(props, this);
-            log.fine(() -> String.format("%s: Create socket#%d",
-                    Thread.currentThread().getName(), this.id));
+            readTimeout = this.props.getProperty("readTimeout");
+            int soTimeout = Integer.decode(readTimeout);
+            setSoTimeout(soTimeout);
+            super.connect(endpoint, timeout);
+            login(this.props, this);
             failed = false;
         } finally {
             if (failed) IOUtils.close(this);

@@ -72,7 +72,7 @@ public class ConnectTest {
         // file database
         doTestConnect("jdbc:sqlited:test?password=" + password);
         doTestConnect("jdbc:sqlited:test?journal_mode=wal&password=" + password);
-        doTestConnect("jdbc:sqlited:///test?password=" + password);
+        doTestConnect("jdbc:sqlited:///test?readTimeout=3000&password=" + password);
         doTestConnect("jdbc:sqlited:///test?journal_mode=wal&password=" + password);
         doTestConnect("jdbc:sqlited:///test?journal_mode=wal&foreign_keys=true&password=" + password);
         doTestConnect("jdbc:sqlited://localhost/test?journal_mode=wal&foreign_keys=true&password=" + password);
@@ -81,8 +81,8 @@ public class ConnectTest {
         doTestConnect("jdbc:sqlited:rmi:?journal_mode=wal&password=" + password);
         doTestConnect("jdbc:sqlited:rmi:test?password=" + password);
         doTestConnect("jdbc:sqlited:rmi:test?journal_mode=wal&password=" + password);
-        doTestConnect("jdbc:sqlited:rmi:///test?password=" + password);
-        doTestConnect("jdbc:sqlited:rmi:///test?journal_mode=wal&password=" + password);
+        doTestConnect("jdbc:sqlited:rmi:///test?loginTimeout=5000&password=" + password);
+        doTestConnect("jdbc:sqlited:rmi:///test?connectTimeout=10000&journal_mode=wal&password=" + password);
         doTestConnect("jdbc:sqlited:rmi:///test?journal_mode=wal&foreign_keys=true&password=" + password);
         doTestConnect("jdbc:sqlited:rmi://localhost/test?journal_mode=wal&foreign_keys=true&password=" + password);
         doTestConnect("jdbc:sqlited:rmi://localhost:3515/test?journal_mode=wal&foreign_keys=true&password=" + password);

@@ -64,7 +64,7 @@ public class RMIServer implements Server {
         }
 
         int port = config.getPort();
-        Properties props = config.getAuthProperties();
+        Properties props = config.getConnProperties();
         RMIServerSocketFactory serverFactory = new AuthServerSocketFactory(props);
         RMIClientSocketFactory clientFactory = new AuthSocketFactory();
         config.setRMIServerSocketFactory(serverFactory);

@@ -17,6 +17,7 @@
 package org.sqlite.rmi.util;
 
 import org.sqlite.util.IOUtils;
+import org.sqlite.util.PropsUtils;
 import org.sqlite.util.logging.LoggerFactory;
 
 import java.io.*;
@@ -62,20 +63,17 @@ public final class SocketUtils {
         if (value != null && !"md5".equalsIgnoreCase(value)) {
             throw new IllegalArgumentException("Unknown auth method '" + value + "'");
         }
-        setIfAbsent(props, "host", "localhost");
-        setIfAbsent(props, "method", "md5");
-        setIfAbsent(props, "loginTimeout", "15000");
+        PropsUtils.setIfAbsent(props, "host", "localhost");
+        PropsUtils.setIfAbsent(props, "method", "md5");
+        PropsUtils.setIfAbsent(props, "loginTimeout", "15000");
+        PropsUtils.setIfAbsent(props, "connectTimeout", "5000");
+        PropsUtils.setIfAbsent(props, "readTimeout", "60000");
 
         return props;
     }
 
-    static void setIfAbsent(Properties props, String name, String value) {
-        if (props.getProperty(name) == null) {
-            props.setProperty(name, value);
-        }
-    }
-
-    public static ServerSocket createServerSocket(Properties props, int port) throws IOException {
+    public static ServerSocket createServerSocket(Properties props, int port)
+            throws IOException {
         String host = props.getProperty("host");
         SocketAddress endpoint = new InetSocketAddress(host, port);
         ServerSocket server = new AuthServerSocket(props);
@@ -93,11 +91,17 @@ public final class SocketUtils {
     }
 
     public static Socket createSocket(String host, int port) throws IOException {
-        final Properties props = PROPS.get();
         log.fine(() -> String.format("%s: connection to %s:%d",
                 Thread.currentThread().getName(), host, port));
 
-        return new AuthSocket(defaultConfig(props), host, port);
+        SocketAddress endpoint = new InetSocketAddress(host, port);
+        final Properties props = defaultConfig(PROPS.get());
+        String connectTimeout = props.getProperty("connectTimeout");
+        int timeout = Integer.decode(connectTimeout);
+        Socket socket = new AuthSocket(props);
+        socket.connect(endpoint, timeout);
+
+        return socket;
     }
 
 }

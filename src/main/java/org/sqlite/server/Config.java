@@ -16,6 +16,7 @@
 
 package org.sqlite.server;
 
+import org.sqlite.util.PropsUtils;
 import org.sqlite.util.logging.LoggerFactory;
 
 import java.io.File;
@@ -53,6 +54,9 @@ public class Config implements Cloneable {
     String baseDir = DEFAULT.getProperty("baseDir", System.getProperty("user.dir"));
     String dataDir = DEFAULT.getProperty("dataDir", this.baseDir + File.separator + "data");
 
+    int loginTimeout = Integer.decode(DEFAULT.getProperty("loginTimeout", "15000"));
+    int readTimeout = Integer.decode(DEFAULT.getProperty("readTimeout", "60000"));
+
     RMIServerSocketFactory rmiServerSocketFactory;
     RMIClientSocketFactory rmiClientSocketFactory;
 
@@ -88,14 +92,22 @@ public class Config implements Cloneable {
         return dataDir;
     }
 
-    public Properties getAuthProperties() {
+    public int getLoginTimeout() {
+        return this.loginTimeout;
+    }
+
+    public int getReadTimeout() {
+        return this.readTimeout;
+    }
+
+    public Properties getConnProperties() {
         final Properties props = new Properties();
 
         props.setProperty("host", this.host);
         props.setProperty("user", this.user);
-        if (this.password != null) {
-            props.setProperty("password", this.password);
-        }
+        PropsUtils.setNullSafe(props, "password", this.password);
+        props.setProperty("loginTimeout", this.loginTimeout + "");
+        props.setProperty("readTimeout", this.readTimeout + "");
 
         return props;
     }
@@ -119,15 +131,23 @@ public class Config implements Cloneable {
     @Override
     public Config clone() {
         Config copy = new Config();
+
+        copy.host = this.host;
+        copy.port = this.port;
+
+        copy.user = this.user;
+        copy.password = this.password;
+        copy.protocol = this.protocol;
+
         copy.baseDir = this.baseDir;
         copy.dataDir = this.dataDir;
-        copy.host = this.host;
-        copy.password = this.password;
-        copy.port = this.port;
-        copy.protocol = this.protocol;
-        copy.user = this.user;
+
+        copy.loginTimeout = this.loginTimeout;
+        copy.readTimeout = this.readTimeout;
+
         copy.rmiClientSocketFactory = this.rmiClientSocketFactory;
         copy.rmiServerSocketFactory = this.rmiServerSocketFactory;
+
         return copy;
     }
 

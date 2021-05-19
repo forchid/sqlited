@@ -57,6 +57,9 @@ public class AuthServerSocket extends ServerSocket {
         Socket socket = super.accept();
         boolean failed = true;
         try {
+            String readTimeout = this.props.getProperty("readTimeout");
+            int soTimeout = Integer.decode(readTimeout);
+            socket.setSoTimeout(soTimeout);
             handshake(this.props, socket, this.secureRandom);
             failed = false;
             return socket;

@@ -24,6 +24,7 @@ import org.sqlite.rmi.RMIConnection;
 import org.sqlite.rmi.RMIDriver;
 import org.sqlite.rmi.util.SocketUtils;
 import org.sqlite.util.IOUtils;
+import org.sqlite.util.PropsUtils;
 import org.sqlite.util.logging.LoggerFactory;
 
 import java.rmi.NotBoundException;
@@ -92,10 +93,11 @@ public class JdbcRMIDriver extends DriverAdapter {
             }
         }
 
-        String user = info.getProperty("user", DEFAULT_USER);
-        String password = info.getProperty("password");
-        info.remove("user");
-        info.remove("password");
+        String user = PropsUtils.remove(info,"user", DEFAULT_USER);
+        String password = PropsUtils.remove(info, "password");
+        String loginTimeout = PropsUtils.remove(info, "loginTimeout");
+        String connectTimeout = PropsUtils.remove(info, "connectTimeout");
+        String readTimeout = PropsUtils.remove(info, "readTimeout");
         i = url.indexOf('?', j);
         if (i != -1) {
             String p = url.substring(i + 1);
@@ -105,12 +107,25 @@ public class JdbcRMIDriver extends DriverAdapter {
                 String[] item = s.split("=", 2);
                 if (item.length == 2) {
                     String name = item[0];
-                    if (name.equals("user")) {
-                        user = item[1];
-                    } else if (name.equals("password")) {
-                        password = item[1];
-                    } else {
-                        np.add(s);
+                    switch (name) {
+                        case "user":
+                            user = item[1];
+                            break;
+                        case "password":
+                            password = item[1];
+                            break;
+                        case "loginTimeout":
+                            loginTimeout = item[1];
+                            break;
+                        case "connectTimeout":
+                            connectTimeout = item[1];
+                            break;
+                        case "readTimeout":
+                            readTimeout = item[1];
+                            break;
+                        default:
+                            np.add(s);
+                            break;
                     }
                 } else {
                     throw new SQLException("Malformed url '" + url + "'");
@@ -127,9 +142,10 @@ public class JdbcRMIDriver extends DriverAdapter {
         // Do connect
         final Properties props = new Properties();
         props.put("user", user);
-        if (password != null) {
-            props.setProperty("password", password);
-        }
+        PropsUtils.setNullSafe(props, "password", password);
+        PropsUtils.setNullSafe(props, "loginTimeout", loginTimeout);
+        PropsUtils.setNullSafe(props, "connectTimeout", connectTimeout);
+        PropsUtils.setNullSafe(props, "readTimeout", readTimeout);
         try {
             SocketUtils.attachProperties(props);
             log.fine(() -> String.format("%s: locate remote registry",
