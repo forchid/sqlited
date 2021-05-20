@@ -24,9 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
 import static junit.framework.TestCase.*;
@@ -35,7 +33,6 @@ import static java.sql.DriverManager.*;
 
 public class ConnectTest extends BaseTest {
     static final Logger log = LoggerFactory.getLogger(ConnectTest.class);
-    static final AtomicInteger ID = new AtomicInteger();
 
     @Test
     public void testPerf() throws Exception {
@@ -72,13 +69,7 @@ public class ConnectTest extends BaseTest {
                 callable.call();
             }
         } else {
-            AtomicInteger id = new AtomicInteger();
-            ExecutorService executors = Executors.newFixedThreadPool(threads, r -> {
-                Thread t = new Thread(r);
-                t.setName("testPerf-" + id.incrementAndGet());
-                t.setDaemon(true);
-                return t;
-            });
+            ExecutorService executors = getExecutors("testPerf", threads);
             try {
                 List<Future<?>> futures = new ArrayList<>(threads);
                 Callable<?> mulCall = () -> {
@@ -232,24 +223,7 @@ public class ConnectTest extends BaseTest {
         if (threads <= 1) {
             callable.call();
         } else {
-            ExecutorService executors = Executors.newFixedThreadPool(threads, r -> {
-               Thread t = new Thread(r);
-               t.setName("testConnect-" + ID.incrementAndGet());
-               t.setDaemon(true);
-               return t;
-            });
-            try {
-                List<Future<?>> futures = new ArrayList<>(threads);
-                for (int i = 0; i < threads; ++i) {
-                    Future<?> f = executors.submit(callable);
-                    futures.add(f);
-                }
-                for (Future<?> f : futures) {
-                    f.get();
-                }
-            } finally {
-                executors.shutdown();
-            }
+            execute(callable, threads, "testConnect");
         }
     }
 

@@ -22,13 +22,18 @@ import org.sqlite.rmi.RMIResultSet;
 import org.sqlite.rmi.RMIResultSetMetaData;
 import org.sqlite.util.IOUtils;
 
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.util.Collections;
+import java.util.List;
 
 public class JdbcRMIResultSet extends ResultSetAdapter {
 
     protected final JdbcRMIConnection conn;
     protected final RMIResultSet rmiRs;
+    private JdbcRMIResultSetMetaData metaData;
+    protected List<Object[]> rows = Collections.emptyList();
+    private int index = -1;
+    private boolean hasNext = true;
 
     public JdbcRMIResultSet(JdbcRMIConnection conn, RMIResultSet rmiRs) {
         this.conn = conn;
@@ -37,25 +42,131 @@ public class JdbcRMIResultSet extends ResultSetAdapter {
 
     @Override
     public boolean next() throws SQLException {
-        return invoke(this.rmiRs::next, this.conn.props);
+        if (!this.hasNext) {
+            return false;
+        }
+
+        if (++this.index >= this.rows.size()) {
+            initMetaData();
+            this.rows = invoke(this.rmiRs::next, this.conn.props);
+            this.index = 0;
+            this.hasNext = this.index < this.rows.size();
+            if (!this.hasNext) {
+                IOUtils.close(this);
+                this.index = -1;
+            }
+            return this.hasNext;
+        } else {
+            return true;
+        }
+    }
+
+    @Override
+    public Object getObject(String columnLabel) throws SQLException {
+        JdbcRMIResultSetMetaData meta = getMetaData();
+        int column = meta.findColumn(columnLabel);
+        Object[] row = this.rows.get(this.index);
+        return row[column - 1];
+    }
+
+    @Override
+    public Object getObject(int column) throws SQLException {
+        Object[] row = this.rows.get(this.index);
+        return row[column - 1];
+    }
+
+    protected static SQLException castException(String type) {
+        return new SQLException("Column can't cast to " + type);
     }
 
     @Override
     public int getInt(String columnLabel) throws SQLException {
-        return invoke(() -> this.rmiRs.getInt(columnLabel), this.conn.props);
+        Object value = getObject(columnLabel);
+        return castToInt(value);
+    }
+
+    @Override
+    public int getInt(int column) throws SQLException {
+        Object value = getObject(column);
+        return castToInt(value);
+    }
+
+    protected int castToInt(Object value) throws SQLException {
+        if (value == null) {
+            return 0;
+        } else if (value instanceof Number) {
+            return ((Number)value).intValue();
+        } else if (value instanceof String) {
+            String s = (String) value;
+            return Long.decode(s).intValue();
+        } else {
+            throw castException("int");
+        }
+    }
+
+    @Override
+    public String getString(int column) throws SQLException {
+        Object value = getObject(column);
+        return castToString(value);
     }
 
     @Override
     public String getString(String columnLabel) throws SQLException {
-        return invoke(() -> this.rmiRs.getString(columnLabel), this.conn.props);
+        Object value = getObject(columnLabel);
+        return castToString(value);
+    }
+
+    protected String castToString(Object value) throws SQLException {
+        if (value == null) {
+            return null;
+        } else if (value instanceof Number) {
+            return value.toString();
+        } else if (value instanceof String) {
+            return (String) value;
+        } else {
+            throw castException("String");
+        }
+    }
+
+    protected JdbcRMIResultSetMetaData initMetaData() throws SQLException {
+        if (this.metaData == null) {
+            this.metaData = invoke(() -> {
+                RMIResultSetMetaData metaData = this.rmiRs.getMetaData();
+                return new JdbcRMIResultSetMetaData(metaData);
+            }, this.conn.props);
+        }
+
+        return this.metaData;
     }
 
     @Override
-    public ResultSetMetaData getMetaData() throws SQLException {
-        return invoke(() -> {
-            RMIResultSetMetaData metaData = this.rmiRs.getMetaData();
-            return new JdbcRMIResultSetMetaData(this.conn, metaData);
-        }, this.conn.props);
+    public JdbcRMIResultSetMetaData getMetaData() throws SQLException {
+        JdbcRMIResultSetMetaData metaData = this.metaData;
+        if (metaData == null) {
+            return initMetaData();
+        } else {
+            return metaData;
+        }
+    }
+
+    @Override
+    public int getFetchSize() throws SQLException {
+        return invoke(this.rmiRs::getFetchSize, this.conn.props);
+    }
+
+    @Override
+    public void setFetchSize(int fetchSize) throws SQLException {
+        invoke(() -> this.rmiRs.setFetchSize(fetchSize), this.conn.props);
+    }
+
+    @Override
+    public int getFetchDirection() throws SQLException {
+        return invoke(this.rmiRs::getFetchDirection, this.conn.props);
+    }
+
+    @Override
+    public void setFetchDirection(int direction) throws SQLException {
+        invoke(() -> this.rmiRs.setFetchDirection(direction), this.conn.props);
     }
 
     @Override

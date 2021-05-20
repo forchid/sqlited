@@ -37,6 +37,17 @@ public final class RMIUtils {
         }
     }
 
+    public static void invoke(VoidMethod m, Properties props) throws SQLException {
+        AuthSocketFactory.attachProperties(props);
+        try {
+            m.invoke();
+        } catch (RemoteException | NotBoundException e) {
+            throw RMIUtils.wrap(e);
+        } finally {
+            AuthSocketFactory.detachProperties();
+        }
+    }
+
     public static <R> R invoke(RMIMethod<R> m, Properties props) throws SQLException {
         AuthSocketFactory.attachProperties(props);
         try {

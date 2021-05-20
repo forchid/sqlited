@@ -17,34 +17,64 @@
 package org.sqlite.jdbc;
 
 import org.junit.Test;
+
 import static junit.framework.TestCase.*;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.concurrent.Callable;
 
 public class PerfTest extends BaseTest {
 
-    @Test
-    public void test() throws Exception {
-        String url = getUrl("jdbc:sqlited:///test",
-                "password", password);
+    protected void prepare() throws Exception {
+        String url = getTestUrl();
+
         try (Connection c = DriverManager.getConnection(url);
              Statement s = c.createStatement()) {
             s.executeUpdate(TBL_ACCOUNT_DDL);
             s.executeUpdate("replace into account(id, name, balance) " +
                     "values(1, 'Tom', 5000000)");
-            for (int i = 0; i < 1000; ++i) {
-                ResultSet rs = s.executeQuery("select id, name, balance " +
-                        "from account where id = 1");
-                assertTrue(rs.next());
-                assertEquals(1, rs.getInt("id"));
-                assertEquals("Tom", rs.getString("name"));
-                assertEquals(5000000, rs.getInt("balance"));
-                assertFalse(rs.next());
-                rs.close();
+        }
+    }
+
+    @Test
+    public void test() throws Exception {
+        prepare();
+        doTest(1000);
+        doTest(100,10);
+    }
+
+    void doTest(int times) throws Exception {
+        doTest(times, 1);
+    }
+
+    void doTest(int times, int threads) throws Exception {
+        Callable<?> callable = () -> {
+            String url = getTestUrl();
+
+            try (Connection c = DriverManager.getConnection(url);
+                 Statement s = c.createStatement()) {
+                for (int i = 0; i < times; ++i) {
+                    ResultSet rs = s.executeQuery("select id, name, balance " +
+                            "from account where id = 1");
+                    assertTrue(rs.next());
+                    assertEquals(1, rs.getInt("id"));
+                    assertEquals("Tom", rs.getString("name"));
+                    assertEquals(5000000, rs.getInt("balance"));
+                    assertFalse(rs.next());
+                    rs.close();
+                }
             }
+
+            return null;
+        };
+
+        if (threads <= 1) {
+            callable.call();
+        } else {
+            execute(callable, threads, "testConcur");
         }
     }
 

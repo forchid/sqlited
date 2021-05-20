@@ -23,11 +23,18 @@ import org.sqlite.util.IOUtils;
 import java.rmi.RemoteException;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
+import static java.sql.ResultSetMetaData.*;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public class RMIResultSetImpl extends ConnRemoteObject implements RMIResultSet {
 
+    protected static final int FETCH_SIZE = 50;
+
     protected final ResultSet rs;
+    protected int fetchSize;
 
     protected RMIResultSetImpl(RMIConnectionImpl conn, ResultSet rs)
             throws RemoteException {
@@ -36,29 +43,87 @@ public class RMIResultSetImpl extends ConnRemoteObject implements RMIResultSet {
     }
 
     @Override
-    public boolean next() throws RemoteException, SQLException {
-        return this.rs.next();
-    }
+    public List<Object[]> next() throws RemoteException, SQLException {
+        int n = this.fetchSize;
 
-    @Override
-    public int getInt(String column) throws RemoteException, SQLException {
-        return this.rs.getInt(column);
-    }
-
-    @Override
-    public String getString(String column) throws RemoteException, SQLException {
-        return this.rs.getString(column);
+        if (n == 0) {
+            n = FETCH_SIZE;
+        }
+        boolean next = this.rs.next();
+        if (next) {
+            ResultSetMetaData meta = this.rs.getMetaData();
+            int m = meta.getColumnCount();
+            List<Object[]> rows = new ArrayList<>(n);
+            for (int i = 0; next && i < n; ++i) {
+                Object[] row = new Object[m];
+                for (int j = 0; j < m; ++j) {
+                    row[j] = this.rs.getObject(j + 1);
+                }
+                rows.add(row);
+                next = this.rs.next();
+            }
+            return rows;
+        } else {
+            return Collections.emptyList();
+        }
     }
 
     @Override
     public RMIResultSetMetaData getMetaData() throws RemoteException, SQLException {
         ResultSetMetaData metaData = this.rs.getMetaData();
-        return new RMIResultSetMetaDataImpl(super.conn, metaData);
+        int n = metaData.getColumnCount();
+
+        String[] names = new String[n];
+        for (int i = 0; i < n; ++i) {
+            names[i] = metaData.getColumnName(i + 1);
+        }
+
+        boolean[][] metas = new boolean[n][3];
+        for (int i = 0; i < n; ++i) {
+            boolean[] meta = metas[i];
+            meta[0] = metaData.isNullable(i + 1) == columnNullable;
+            meta[1] = false; // Reserved: primary key flag
+            meta[2] = metaData.isAutoIncrement(i + 1);
+        }
+
+        String[] typeNames = new String[n];
+        for (int i = 0; i < n; ++i) {
+            typeNames[i] = metaData.getColumnTypeName(i + 1);
+        }
+        int[] types = new int[n];
+        for (int i = 0; i < n; ++i) {
+            types[i] = metaData.getColumnType(i + 1);
+        }
+
+        return new RMIResultSetMetaData(names, metas, typeNames, types);
+    }
+
+    @Override
+    public int getFetchSize() throws RemoteException, SQLException {
+        return this.fetchSize;
+    }
+
+    @Override
+    public void setFetchSize(int fetchSize) throws RemoteException, SQLException {
+        if (fetchSize < 0) {
+            throw new SQLException("fetch size " + fetchSize + " negative");
+        }
+        this.fetchSize = fetchSize;
     }
 
     @Override
     public void close() throws RemoteException {
         IOUtils.close(this.rs);
+    }
+
+    @Override
+    public int getFetchDirection() throws RemoteException, SQLException {
+        return this.rs.getFetchDirection();
+    }
+
+    @Override
+    public void setFetchDirection(int direction) throws RemoteException, SQLException {
+        this.rs.setFetchDirection(direction);
     }
 
 }

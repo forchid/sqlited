@@ -22,6 +22,11 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.sqlite.server.SQLited;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+
 public abstract class BaseTest {
 
     protected static final String password = "123456";
@@ -60,7 +65,10 @@ public abstract class BaseTest {
     @After
     public void destroy() {
         this.server.stop();
-        this.server = null;
+    }
+
+    public String getTestUrl() {
+        return getUrl("jdbc:sqlited:///test", "password", password);
     }
 
     public static String getUrl(String base, Object ... args) {
@@ -80,6 +88,38 @@ public abstract class BaseTest {
         }
 
         return sb.toString();
+    }
+
+    public static ExecutorService getExecutors(String name, int threads) {
+        AtomicInteger id = new AtomicInteger();
+        return Executors.newFixedThreadPool(threads, r -> {
+            Thread t = new Thread(r);
+            t.setName(name + "-" + id.incrementAndGet());
+            t.setDaemon(true);
+            return t;
+        });
+    }
+
+    public static void execute(Callable<?> callable, int threads)
+            throws ExecutionException, InterruptedException {
+        execute(callable, threads, "test");
+    }
+
+    public static void execute(Callable<?> callable, int threads, String poolName)
+        throws ExecutionException, InterruptedException {
+        ExecutorService executors = getExecutors(poolName, threads);
+        try {
+            List<Future<?>> futures = new ArrayList<>(threads);
+            for (int i = 0; i < threads; ++i) {
+                Future<?> f = executors.submit(callable);
+                futures.add(f);
+            }
+            for (Future<?> f: futures) {
+                f.get();
+            }
+        } finally {
+            executors.shutdown();
+        }
     }
 
 }

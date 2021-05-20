@@ -88,11 +88,16 @@ public class RMIServer implements Server {
     @Override
     public void stop() throws IllegalStateException {
         Registry registry = this.registry;
+        if (registry == null) {
+            return;
+        }
+
         try {
             IOUtils.close(this.serverSocketFactory);
             ROUtils.unbind(registry, NAME);
             ROUtils.unexport(this.driver);
             ROUtils.unexport(registry);
+            this.registry = null;
         } finally {
             this.stopped = true;
         }

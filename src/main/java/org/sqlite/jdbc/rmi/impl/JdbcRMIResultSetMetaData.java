@@ -18,38 +18,44 @@ package org.sqlite.jdbc.rmi.impl;
 
 import org.sqlite.jdbc.adapter.ResultSetMetaDataAdapter;
 import org.sqlite.rmi.RMIResultSetMetaData;
-import static org.sqlite.jdbc.rmi.util.RMIUtils.*;
 
 import java.sql.SQLException;
 
 public class JdbcRMIResultSetMetaData extends ResultSetMetaDataAdapter {
 
-    protected final JdbcRMIConnection conn;
     protected final RMIResultSetMetaData rmiMetaData;
 
-    public JdbcRMIResultSetMetaData(JdbcRMIConnection conn, RMIResultSetMetaData rmiMetaData) {
-        this.conn = conn;
+    public JdbcRMIResultSetMetaData(RMIResultSetMetaData rmiMetaData) {
         this.rmiMetaData = rmiMetaData;
     }
 
     @Override
     public int getColumnCount() throws SQLException {
-        return invoke(this.rmiMetaData::getColumnCount, this.conn.props);
+        return this.rmiMetaData.getColumnCount();
+    }
+
+    public int findColumn(String name) throws SQLException {
+        return this.rmiMetaData.findColumn(name);
+    }
+
+    @Override
+    public String getColumnLabel(int columnIndex) throws SQLException {
+        return this.rmiMetaData.getColumnLabel(columnIndex);
     }
 
     @Override
     public String getColumnName(int columnIndex) throws SQLException {
-        return invoke(() -> this.rmiMetaData.getColumnName(columnIndex), this.conn.props);
+        return this.rmiMetaData.getColumnName(columnIndex);
     }
 
     @Override
     public int getColumnType(int columnIndex) throws SQLException {
-        return invoke(() -> this.rmiMetaData.getColumnType(columnIndex), this.conn.props);
+        return this.rmiMetaData.getColumnType(columnIndex);
     }
 
     @Override
     public int getColumnDisplaySize(int columnIndex) throws SQLException {
-        return invoke(() -> this.rmiMetaData.getColumnDisplaySize(columnIndex), this.conn.props);
+        return this.rmiMetaData.getColumnDisplaySize(columnIndex);
     }
 
 }
