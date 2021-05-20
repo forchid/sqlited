@@ -17,24 +17,29 @@
 package org.sqlite.rmi;
 
 import org.sqlite.rmi.util.SocketUtils;
+import org.sqlite.util.IOUtils;
+import org.sqlite.util.logging.LoggerFactory;
 
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.rmi.server.RMIServerSocketFactory;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Logger;
 
 /**
  * RMI serverSocket factory with authentication.
  *
  * @threadsafe
  */
-public class AuthServerSocketFactory implements RMIServerSocketFactory {
+public class AuthServerSocketFactory implements RMIServerSocketFactory, AutoCloseable {
 
+    static final Logger log = LoggerFactory.getLogger(AuthServerSocketFactory.class);
     private static final AtomicInteger ID = new AtomicInteger();
 
     protected final int id;
     private final Properties props;
+    private volatile ServerSocket serverSocket;
 
     public AuthServerSocketFactory(Properties props) {
         this.props = SocketUtils.defaultConfig(props);
@@ -47,7 +52,24 @@ public class AuthServerSocketFactory implements RMIServerSocketFactory {
 
     @Override
     public ServerSocket createServerSocket(int port) throws IOException {
-        return SocketUtils.createServerSocket(this.props, port);
+        Properties props = this.props;
+        ServerSocket s = SocketUtils.createServerSocket(props, port);
+        return (this.serverSocket = s);
+    }
+
+    public boolean isClosed() {
+        ServerSocket s = this.serverSocket;
+        return (s != null && s.isClosed());
+    }
+
+    @Override
+    public void close() {
+        ServerSocket s = this.serverSocket;
+        log.info(() -> String.format("%s: close server socketFactory#%d",
+                Thread.currentThread().getName(), this.id));
+        while (s != null && !isClosed()) {
+            IOUtils.close(s);
+        }
     }
 
     @Override

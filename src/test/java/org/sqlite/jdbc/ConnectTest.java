@@ -17,12 +17,9 @@
 package org.sqlite.jdbc;
 
 import org.junit.Test;
-import org.sqlite.server.SQLited;
+import org.sqlite.util.logging.LoggerFactory;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -30,26 +27,83 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Logger;
 
 import static junit.framework.TestCase.*;
 
 import static java.sql.DriverManager.*;
 
-public class ConnectTest {
-
+public class ConnectTest extends BaseTest {
+    static final Logger log = LoggerFactory.getLogger(ConnectTest.class);
     static final AtomicInteger ID = new AtomicInteger();
 
-    final String password = "123456";
-    final SQLited server = new SQLited();
-    {
-        this.server.parse(new String[]{
-                "-D", "temp", "-p", password
-        }).start();
+    @Test
+    public void testPerf() throws Exception {
+        doTestPerf(10);
+        doTestPerf(50);
+        doTestPerf(100);
+        doTestPerf(10, 2);
+        doTestPerf(50, 4);
+        doTestPerf(1, 10);
+        doTestPerf(1, 250);
+        doTestPerf(100, 100);
+    }
+
+    private void doTestPerf(int conns) throws Exception {
+        doTestPerf(conns, 1);
+    }
+
+    private void doTestPerf(int conns, int threads) throws Exception {
+        Callable<?> callable = () -> {
+            String url = "jdbc:sqlited:test";
+            try (Connection c = DriverManager.getConnection(url, "root", password);
+                Statement s = c.createStatement()){
+                ResultSet rs = s.executeQuery("select current_timestamp cts");
+                assertTrue(rs.next());
+                assertNotNull(rs.getString("cts"));
+                rs.close();
+            }
+            return null;
+        };
+
+        log.info(() -> String.format("conns %d, threads %s", conns, threads));
+        if (conns <= 1) {
+            for (int i = 0; i < conns; ++i) {
+                callable.call();
+            }
+        } else {
+            AtomicInteger id = new AtomicInteger();
+            ExecutorService executors = Executors.newFixedThreadPool(threads, r -> {
+                Thread t = new Thread(r);
+                t.setName("testPerf-" + id.incrementAndGet());
+                t.setDaemon(true);
+                return t;
+            });
+            try {
+                List<Future<?>> futures = new ArrayList<>(threads);
+                Callable<?> mulCall = () -> {
+                    for (int i = 0; i < conns; ++i) {
+                        callable.call();
+                    }
+                    return null;
+                };
+                for (int i = 0; i < threads; ++i) {
+                    Future<?> f = executors.submit(mulCall);
+                    futures.add(f);
+                }
+                for (Future<?> f: futures) {
+                    f.get();
+                }
+            } finally {
+                executors.shutdown();
+            }
+        }
+        log.info("OK");
     }
 
     @Test
     public void testConnect() throws Exception {
-        // Incorrect user or password
+        // Incorrect user or password test-1
         try {
             doTestConnect("jdbc:sqlited:?user=test&password=" + password);
             fail();
@@ -142,6 +196,20 @@ public class ConnectTest {
         } catch (SQLException e) {
             // OK
         }
+
+        // Incorrect user or password test-2
+        try {
+            doTestConnect("jdbc:sqlited:?user=sa&password=" + password);
+            fail();
+        } catch (SQLException e) {
+            // OK
+        }
+        try {
+            doTestConnect("jdbc:sqlited:?password=" + password + "x");
+            fail();
+        } catch (SQLException e) {
+            // OK
+        }
     }
 
     void doTestConnect(String url) throws Exception {
@@ -156,10 +224,7 @@ public class ConnectTest {
                 assertTrue(rs.next());
                 assertEquals(1, rs.getInt("1"));
                 rs.close();
-                s.executeUpdate("create table if not exists account(" +
-                        "id int not null primary key, " +
-                        "name varchar(20) not null, " +
-                        "balance decimal(12,1) not null default 0)");
+                s.executeUpdate(TBL_ACCOUNT_DDL);
             }
             return null;
         };
@@ -169,7 +234,7 @@ public class ConnectTest {
         } else {
             ExecutorService executors = Executors.newFixedThreadPool(threads, r -> {
                Thread t = new Thread(r);
-               t.setName("ConnectTest-" + ID.incrementAndGet());
+               t.setName("testConnect-" + ID.incrementAndGet());
                t.setDaemon(true);
                return t;
             });

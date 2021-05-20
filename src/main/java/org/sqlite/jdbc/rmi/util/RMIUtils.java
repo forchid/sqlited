@@ -16,7 +16,7 @@
 
 package org.sqlite.jdbc.rmi.util;
 
-import org.sqlite.rmi.util.SocketUtils;
+import org.sqlite.rmi.AuthSocketFactory;
 
 import java.rmi.ConnectException;
 import java.rmi.NotBoundException;
@@ -38,13 +38,13 @@ public final class RMIUtils {
     }
 
     public static <R> R invoke(RMIMethod<R> m, Properties props) throws SQLException {
-        SocketUtils.attachProperties(props);
+        AuthSocketFactory.attachProperties(props);
         try {
             return m.invoke();
         } catch (RemoteException | NotBoundException e) {
             throw RMIUtils.wrap(e);
         } finally {
-            SocketUtils.detachProperties();
+            AuthSocketFactory.detachProperties();
         }
     }
 

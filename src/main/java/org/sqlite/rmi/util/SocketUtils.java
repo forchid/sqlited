@@ -33,20 +33,11 @@ import java.util.logging.Logger;
 public final class SocketUtils {
     static final Logger log = LoggerFactory.getLogger(SocketUtils.class);
 
-    static final ThreadLocal<Properties> PROPS = new ThreadLocal<>();
     static final Map<String, Byte> METHODS = new HashMap<String, Byte>() {
         { put("md5", (byte)0x01); }
     };
 
     private SocketUtils() {}
-
-    public static void attachProperties(Properties props) {
-        PROPS.set(props);
-    }
-
-    public static void detachProperties() {
-        PROPS.remove();
-    }
 
     public static Properties defaultConfig(Properties props)
             throws IllegalArgumentException {
@@ -90,12 +81,12 @@ public final class SocketUtils {
         }
     }
 
-    public static Socket createSocket(String host, int port) throws IOException {
+    public static Socket createSocket(Properties props, String host, int port)
+            throws IOException {
         log.fine(() -> String.format("%s: connection to %s:%d",
                 Thread.currentThread().getName(), host, port));
 
         SocketAddress endpoint = new InetSocketAddress(host, port);
-        final Properties props = defaultConfig(PROPS.get());
         String connectTimeout = props.getProperty("connectTimeout");
         int timeout = Integer.decode(connectTimeout);
         Socket socket = new AuthSocket(props);
