@@ -16,6 +16,7 @@
 
 package org.sqlite.jdbc;
 
+import org.junit.Before;
 import org.junit.Test;
 
 import static junit.framework.TestCase.*;
@@ -28,7 +29,8 @@ import java.util.concurrent.Callable;
 
 public class PerfTest extends BaseTest {
 
-    protected void prepare() throws Exception {
+    @Before
+    public void prepare() throws Exception {
         String url = getTestUrl();
 
         try (Connection c = DriverManager.getConnection(url);
@@ -41,9 +43,17 @@ public class PerfTest extends BaseTest {
 
     @Test
     public void test() throws Exception {
-        prepare();
+        doTest(1);
+        doTest(10);
+        doTest(100);
         doTest(1000);
+    }
+
+    @Test
+    public void testConcur() throws Exception {
         doTest(100,10);
+        doTest(10,100);
+        doTest(20,50);
     }
 
     void doTest(int times) throws Exception {
@@ -62,7 +72,7 @@ public class PerfTest extends BaseTest {
                     assertTrue(rs.next());
                     assertEquals(1, rs.getInt("id"));
                     assertEquals("Tom", rs.getString("name"));
-                    assertEquals(5000000, rs.getInt("balance"));
+                    assertEquals(5000000, rs.getInt(3));
                     assertFalse(rs.next());
                     rs.close();
                 }

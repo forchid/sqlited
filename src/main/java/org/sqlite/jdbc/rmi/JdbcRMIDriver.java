@@ -26,6 +26,7 @@ import org.sqlite.util.IOUtils;
 import org.sqlite.util.PropsUtils;
 import org.sqlite.util.logging.LoggerFactory;
 
+import java.rmi.NoSuchObjectException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -148,30 +149,38 @@ public class JdbcRMIDriver extends DriverAdapter {
         PropsUtils.setNullSafe(props, "loginTimeout", loginTimeout);
         PropsUtils.setNullSafe(props, "connectTimeout", connectTimeout);
         PropsUtils.setNullSafe(props, "readTimeout", readTimeout);
-        RMIClientSocketFactory socketFactory = new AuthSocketFactory(props);
-        try {
-            AuthSocketFactory.attachProperties(props);
-            log.fine(() -> String.format("%s: locate remote registry",
-                    Thread.currentThread().getName()));
-            Registry registry = LocateRegistry.getRegistry(host, port, socketFactory);
-            log.fine(() -> String.format("%s: lookup remote driver",
-                    Thread.currentThread().getName()));
-            RMIDriver rmiDriver = (RMIDriver) registry.lookup("SQLited");
-            log.fine(() -> String.format("%s: get a remote connection",
-                    Thread.currentThread().getName()));
-            RMIConnection rmiConn = rmiDriver.connect(url, info);
-            boolean failed = true;
+        int retries = 0;
+        while (true) {
+            RMIClientSocketFactory socketFactory = new AuthSocketFactory(props);
             try {
-                Connection c = new JdbcRMIConnection(props, rmiConn);
-                failed = false;
-                return c;
+                AuthSocketFactory.attachProperties(props);
+                log.fine(() -> String.format("%s: locate remote registry",
+                        Thread.currentThread().getName()));
+                Registry registry = LocateRegistry.getRegistry(host, port, socketFactory);
+                log.fine(() -> String.format("%s: lookup remote driver",
+                        Thread.currentThread().getName()));
+                RMIDriver rmiDriver = (RMIDriver) registry.lookup("SQLited");
+                log.fine(() -> String.format("%s: get a remote connection",
+                        Thread.currentThread().getName()));
+                RMIConnection rmiConn = rmiDriver.connect(url, info);
+                boolean failed = true;
+                try {
+                    Connection c = new JdbcRMIConnection(props, rmiConn);
+                    failed = false;
+                    return c;
+                } finally {
+                    if (failed) IOUtils.close(rmiConn);
+                }
+            } catch (NoSuchObjectException e) {
+                if (++retries > 1) {
+                    throw RMIUtils.wrap(e);
+                }
+                // Do retry for obsolete reference
+            } catch (NotBoundException | RemoteException e) {
+                throw RMIUtils.wrap(e);
             } finally {
-                if (failed) IOUtils.close(rmiConn);
+                AuthSocketFactory.detachProperties();
             }
-        } catch (NotBoundException | RemoteException e) {
-            throw RMIUtils.wrap(e);
-        } finally {
-            AuthSocketFactory.detachProperties();
         }
     }
 

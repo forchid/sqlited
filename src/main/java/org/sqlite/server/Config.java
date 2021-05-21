@@ -104,6 +104,7 @@ public class Config implements Cloneable {
         final Properties props = new Properties();
 
         props.setProperty("host", this.host);
+        props.setProperty("port", this.port + "");
         props.setProperty("user", this.user);
         PropsUtils.setNullSafe(props, "password", this.password);
         props.setProperty("loginTimeout", this.loginTimeout + "");

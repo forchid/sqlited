@@ -21,10 +21,7 @@ import org.sqlite.util.PropsUtils;
 import org.sqlite.util.logging.LoggerFactory;
 
 import java.io.*;
-import java.net.InetSocketAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.SocketAddress;
+import java.net.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -72,8 +69,29 @@ public final class SocketUtils {
         boolean failed = true;
         try {
             log.info(() -> String.format("Server bind %s:%d", host, port));
-            String backlog = props.getProperty("backlog", "150");
-            server.bind(endpoint, Integer.decode(backlog));
+            String s = props.getProperty("backlog", "150");
+            int backlog = Integer.decode(s);
+            long start = System.currentTimeMillis();
+
+            server.setReuseAddress(true);
+            while (true) {
+                try {
+                    server.bind(endpoint, backlog);
+                    break;
+                } catch (BindException e) {
+                    long cur = System.currentTimeMillis();
+                    if ( cur - start > 10000) {
+                        throw e;
+                    }
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException cause) {
+                        Thread.currentThread().interrupt();
+                        throw e;
+                    }
+                }
+            }
+
             failed = false;
             return server;
         } finally {

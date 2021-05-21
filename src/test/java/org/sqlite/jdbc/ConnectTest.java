@@ -17,11 +17,13 @@
 package org.sqlite.jdbc;
 
 import org.junit.Test;
+import org.sqlite.server.SQLited;
 import org.sqlite.util.logging.LoggerFactory;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -33,6 +35,32 @@ import static java.sql.DriverManager.*;
 
 public class ConnectTest extends BaseTest {
     static final Logger log = LoggerFactory.getLogger(ConnectTest.class);
+
+    @Test
+    public void testRestart() throws Exception {
+        int n = 100;
+        int p = 3525;
+
+        for (int i = 0; i < n; ++i) {
+            String u = "test";
+            final SQLited d = new SQLited();
+            d.parse(new String[]{ "-P", p + "", "-D", "temp", "-u", u });
+            d.start();
+            String url = getUrl("jdbc:sqlited://:" + p + "/test");
+            Properties info = new Properties();
+            info.put("user", u);
+            try (Connection c = DriverManager.getConnection(url, info);
+                 Statement s = c.createStatement()) {
+                String sql = "select current_timestamp as cts";
+                ResultSet rs = s.executeQuery(sql);
+                assertTrue(rs.next());
+                assertNotNull(rs.getString(1));
+                assertFalse(rs.next());
+                rs.close();
+            }
+            d.stop();
+        }
+    }
 
     @Test
     public void testPerf() throws Exception {

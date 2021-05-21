@@ -67,21 +67,25 @@ public class AuthServerSocketFactory implements RMIServerSocketFactory, AutoClos
         ServerSocket s = this.serverSocket;
         log.info(() -> String.format("%s: close server socketFactory#%d",
                 Thread.currentThread().getName(), this.id));
-        while (s != null && !isClosed()) {
-            IOUtils.close(s);
-        }
+        IOUtils.close(s);
     }
 
     @Override
     public int hashCode() {
-        return this.id;
+        String host = this.props.getProperty("host");
+        String port = this.props.getProperty("port");
+        return (host.hashCode() ^ port.hashCode());
     }
 
     @Override
     public boolean equals(Object o) {
         if (o instanceof AuthServerSocketFactory) {
             AuthServerSocketFactory f = (AuthServerSocketFactory)o;
-            return f.id == this.id;
+            String host = this.props.getProperty("host");
+            String port = this.props.getProperty("port");
+            String oHost = f.props.getProperty("host");
+            String oPort = f.props.getProperty("port");
+            return (host.equals(oHost) && port.equals(oPort));
         } else {
             return false;
         }
