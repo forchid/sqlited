@@ -232,7 +232,7 @@ public abstract class ResultSetAdapter implements ResultSet {
     }
 
     @Override
-    public int findColumn(String s) throws SQLException {
+    public int findColumn(String columnLabel) throws SQLException {
         throw new SQLFeatureNotSupportedException();
     }
 

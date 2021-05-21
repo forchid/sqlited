@@ -19,10 +19,14 @@ package org.sqlite.jdbc;
 import org.junit.Test;
 import static junit.framework.TestCase.*;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.concurrent.Callable;
 
 public class PerfTest extends BaseTest {
@@ -37,10 +41,11 @@ public class PerfTest extends BaseTest {
         }
         try (Connection c = DriverManager.getConnection(url);
              Statement s = c.createStatement()) {
+            s.executeUpdate("drop table if exists account");
             s.executeUpdate(TBL_ACCOUNT_DDL);
             s.executeUpdate("delete from account");
-            s.executeUpdate("insert into account(id, name, balance) " +
-                    "values(1, 'Tom', 5000000)");
+            s.executeUpdate("insert into account(id, name, balance, create_at) " +
+                    "values(1, 'Tom', 5000000, '2021-05-21 20:30:45.000')");
         }
     }
 
@@ -118,15 +123,20 @@ public class PerfTest extends BaseTest {
     void doTest(int times, int threads, String url) throws Exception {
         Callable<?> callable = () -> {
             String cStr = url == null? getTestUrl(): url;
+            DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
             try (Connection c = DriverManager.getConnection(cStr);
                  Statement s = c.createStatement()) {
                 for (int i = 0; i < times; ++i) {
-                    ResultSet rs = s.executeQuery("select id, name, balance " +
-                            "from account where id = 1");
+                    String sql = "select id, name, balance, create_at " +
+                            "from account where id = 1";
+                    ResultSet rs = s.executeQuery(sql);
                     assertTrue(rs.next());
                     assertEquals(1, rs.getInt("id"));
                     assertEquals("Tom", rs.getString("name"));
-                    assertEquals(5000000, rs.getInt(3));
+                    assertEquals(new BigDecimal("5000000.0"), rs.getBigDecimal(3)
+                            .setScale(1, RoundingMode.HALF_UP));
+                    assertEquals(df.parse("2021-05-21 20:30:45.000"),
+                            rs.getTimestamp("create_at"));
                     assertFalse(rs.next());
                     rs.close();
                 }
