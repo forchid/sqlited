@@ -23,6 +23,7 @@ import org.sqlite.rmi.AuthSocketFactory;
 import org.sqlite.rmi.RMIConnection;
 import org.sqlite.rmi.RMIDriver;
 import org.sqlite.util.IOUtils;
+import org.sqlite.util.LruCache;
 import org.sqlite.util.PropsUtils;
 import org.sqlite.util.logging.LoggerFactory;
 
@@ -43,6 +44,8 @@ public class JdbcRMIDriver extends DriverAdapter {
 
     static final Logger log = LoggerFactory.getLogger(JdbcRMIDriver.class);
     public static final String PREFIX = DriverAdapter.PREFIX + "rmi:";
+
+    final LruCache<RMIClientSocketFactory, Registry> regs = new LruCache<>(250);
 
     @Override
     public Connection connect(String url, Properties info)
@@ -152,11 +155,19 @@ public class JdbcRMIDriver extends DriverAdapter {
         int retries = 0;
         while (true) {
             RMIClientSocketFactory socketFactory = new AuthSocketFactory(props);
+            Registry registry = null;
+            boolean regCached = true;
             try {
                 AuthSocketFactory.attachProperties(props);
                 log.fine(() -> String.format("%s: locate remote registry",
                         Thread.currentThread().getName()));
-                Registry registry = LocateRegistry.getRegistry(host, port, socketFactory);
+                synchronized (this.regs) {
+                    registry = this.regs.get(socketFactory);
+                }
+                if (registry == null) {
+                    registry = LocateRegistry.getRegistry(host, port, socketFactory);
+                    regCached = false;
+                }
                 log.fine(() -> String.format("%s: lookup remote driver",
                         Thread.currentThread().getName()));
                 RMIDriver rmiDriver = (RMIDriver) registry.lookup("SQLited");
@@ -172,10 +183,15 @@ public class JdbcRMIDriver extends DriverAdapter {
                     if (failed) IOUtils.close(rmiConn);
                 }
             } catch (NoSuchObjectException e) {
-                if (++retries > 1) {
+                if (++retries > 2) {
                     throw RMIUtils.wrap(e);
                 }
                 // Do retry for obsolete reference
+                if (registry != null && regCached) {
+                    synchronized (this.regs) {
+                        this.regs.remove(socketFactory);
+                    }
+                }
             } catch (NotBoundException | RemoteException e) {
                 throw RMIUtils.wrap(e);
             } finally {
