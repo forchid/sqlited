@@ -20,20 +20,18 @@ import org.sqlite.jdbc.adapter.ResultSetAdapter;
 import static org.sqlite.jdbc.rmi.util.RMIUtils.*;
 import org.sqlite.rmi.RMIResultSet;
 import org.sqlite.rmi.RMIResultSetMetaData;
+import org.sqlite.rmi.RowIterator;
 import org.sqlite.util.IOUtils;
 
 import java.sql.SQLException;
-import java.util.Collections;
-import java.util.List;
 
 public class JdbcRMIResultSet extends ResultSetAdapter {
 
     protected final JdbcRMIConnection conn;
     protected final RMIResultSet rmiRs;
+
     private JdbcRMIResultSetMetaData metaData;
-    protected List<Object[]> rows = Collections.emptyList();
-    private int index = -1;
-    private boolean hasNext = true;
+    protected RowIterator rowItr;
 
     public JdbcRMIResultSet(JdbcRMIConnection conn, RMIResultSet rmiRs) {
         this.conn = conn;
@@ -42,36 +40,38 @@ public class JdbcRMIResultSet extends ResultSetAdapter {
 
     @Override
     public boolean next() throws SQLException {
-        if (!this.hasNext) {
+        RowIterator i = this.rowItr;
+        if (i != null && i.isLast() && !i.hasNext()) {
+            IOUtils.close(this);
             return false;
         }
 
-        if (++this.index >= this.rows.size()) {
-            initMetaData();
-            this.rows = invoke(this.rmiRs::next, this.conn.props);
-            this.index = 0;
-            this.hasNext = this.index < this.rows.size();
-            if (!this.hasNext) {
-                IOUtils.close(this);
-                this.index = -1;
+        if (i == null || !i.hasNext()) {
+            boolean meta = this.metaData == null;
+            i = invoke(() -> this.rmiRs.next(meta), this.conn.props);
+            RMIResultSetMetaData d = i.getMetaData();
+            if (meta && d != null) {
+                this.metaData = new JdbcRMIResultSetMetaData(d);
             }
-            return this.hasNext;
-        } else {
-            return true;
+            this.rowItr = i.reset();
         }
+        boolean next = i.hasNext();
+        if (next) i.next();
+
+        return next;
     }
 
     @Override
     public Object getObject(String columnLabel) throws SQLException {
         JdbcRMIResultSetMetaData meta = getMetaData();
         int column = meta.findColumn(columnLabel);
-        Object[] row = this.rows.get(this.index);
+        Object[] row = this.rowItr.get();
         return row[column - 1];
     }
 
     @Override
     public Object getObject(int column) throws SQLException {
-        Object[] row = this.rows.get(this.index);
+        Object[] row = this.rowItr.get();
         return row[column - 1];
     }
 
@@ -95,7 +95,8 @@ public class JdbcRMIResultSet extends ResultSetAdapter {
         if (value == null) {
             return 0;
         } else if (value instanceof Number) {
-            return ((Number)value).intValue();
+            Number n = (Number) value;
+            return n.intValue();
         } else if (value instanceof String) {
             String s = (String) value;
             return Long.decode(s).intValue();

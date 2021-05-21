@@ -21,14 +21,17 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.sqlite.server.SQLited;
+import org.sqlite.util.logging.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public abstract class BaseTest {
-
+    static final Logger log = LoggerFactory.getLogger(BaseTest.class);
     protected static final String password = "123456";
 
     protected static final String TBL_ACCOUNT_DDL =
@@ -67,7 +70,24 @@ public abstract class BaseTest {
         this.server.stop();
     }
 
-    public String getTestUrl() {
+    public static void testMySQL(VoidCallable<?> test) {
+        try {
+            test.call();
+        } catch (Exception e) {
+            log.log(Level.INFO, "Skip MySQL test", e);
+        }
+    }
+
+    public String getSQLiteUrl() {
+        String dataDir = this.server.getConfig().getDataDir();
+        return "jdbc:sqlite:" + dataDir +"/test";
+    }
+
+    public static String getMySQLUrl() {
+        return "jdbc:mysql://localhost:3306/test?user=root&password=123456";
+    }
+
+    public static String getTestUrl() {
         return getUrl("jdbc:sqlited:///test", "password", password);
     }
 

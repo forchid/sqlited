@@ -74,14 +74,37 @@ public class ConnectTest extends BaseTest {
         doTestPerf(100, 100);
     }
 
+    @Test
+    public void testPerfMySQL() {
+        testMySQL(() -> {
+            String url = getMySQLUrl();
+            doTestPerf(10, url);
+            doTestPerf(50, url);
+            doTestPerf(100, url);
+            doTestPerf(10, 2, url);
+            doTestPerf(50, 4, url);
+            doTestPerf(1, 10, url);
+            doTestPerf(1, 250, url);
+            doTestPerf(100, 100, url);
+        });
+    }
+
     private void doTestPerf(int conns) throws Exception {
-        doTestPerf(conns, 1);
+        doTestPerf(conns, 1, null);
+    }
+
+    private void doTestPerf(int conns, String url) throws Exception {
+        doTestPerf(conns, 1, url);
     }
 
     private void doTestPerf(int conns, int threads) throws Exception {
+        doTestPerf(conns, threads, null);
+    }
+
+    private void doTestPerf(int conns, int threads, String url) throws Exception {
         Callable<?> callable = () -> {
-            String url = "jdbc:sqlited:test";
-            try (Connection c = DriverManager.getConnection(url, "root", password);
+            String cStr = url == null? "jdbc:sqlited:test": url;
+            try (Connection c = DriverManager.getConnection(cStr, "root", password);
                 Statement s = c.createStatement()){
                 ResultSet rs = s.executeQuery("select current_timestamp cts");
                 assertTrue(rs.next());

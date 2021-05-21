@@ -18,6 +18,7 @@ package org.sqlite.server.rmi.impl;
 
 import org.sqlite.rmi.RMIResultSetMetaData;
 import org.sqlite.rmi.RMIResultSet;
+import org.sqlite.rmi.RowIterator;
 import org.sqlite.util.IOUtils;
 
 import java.rmi.RemoteException;
@@ -31,7 +32,8 @@ import java.util.List;
 
 public class RMIResultSetImpl extends ConnRemoteObject implements RMIResultSet {
 
-    protected static final int FETCH_SIZE = 50;
+    protected static final int FETCH_SIZE_DEFAULT = 50;
+    protected static final int FETCH_SIZE_MAXIMUM = 500;
 
     protected final ResultSet rs;
     protected int fetchSize;
@@ -43,16 +45,22 @@ public class RMIResultSetImpl extends ConnRemoteObject implements RMIResultSet {
     }
 
     @Override
-    public List<Object[]> next() throws RemoteException, SQLException {
-        int n = this.fetchSize;
-
-        if (n == 0) {
-            n = FETCH_SIZE;
+    public RowIterator next(boolean meta) throws RemoteException, SQLException {
+        final int n, size = this.fetchSize;
+        if (size == 0) {
+            n = FETCH_SIZE_DEFAULT;
+        } else {
+            n = Math.min(size, FETCH_SIZE_MAXIMUM);
         }
+
+        final RMIResultSetMetaData metaData;
+        if (meta && !this.rs.isClosed()) metaData = getMetaData();
+        else metaData = null;
+
         boolean next = this.rs.next();
         if (next) {
-            ResultSetMetaData meta = this.rs.getMetaData();
-            int m = meta.getColumnCount();
+            ResultSetMetaData rsMeta = this.rs.getMetaData();
+            int m = rsMeta.getColumnCount();
             List<Object[]> rows = new ArrayList<>(n);
             for (int i = 0; next && i < n; ++i) {
                 Object[] row = new Object[m];
@@ -62,9 +70,10 @@ public class RMIResultSetImpl extends ConnRemoteObject implements RMIResultSet {
                 rows.add(row);
                 next = this.rs.next();
             }
-            return rows;
+            return new RowIterator(rows, !next, metaData);
         } else {
-            return Collections.emptyList();
+            List<Object[]> rows = Collections.emptyList();
+            return new RowIterator(rows, true, metaData);
         }
     }
 

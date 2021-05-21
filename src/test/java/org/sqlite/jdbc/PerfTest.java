@@ -16,9 +16,7 @@
 
 package org.sqlite.jdbc;
 
-import org.junit.Before;
 import org.junit.Test;
-
 import static junit.framework.TestCase.*;
 
 import java.sql.Connection;
@@ -29,20 +27,26 @@ import java.util.concurrent.Callable;
 
 public class PerfTest extends BaseTest {
 
-    @Before
-    public void prepare() throws Exception {
-        String url = getTestUrl();
+    protected void prepare() throws Exception {
+        prepare(null);
+    }
 
+    protected void prepare(String url) throws Exception {
+        if (url == null) {
+            url = getTestUrl();
+        }
         try (Connection c = DriverManager.getConnection(url);
              Statement s = c.createStatement()) {
             s.executeUpdate(TBL_ACCOUNT_DDL);
-            s.executeUpdate("replace into account(id, name, balance) " +
+            s.executeUpdate("delete from account");
+            s.executeUpdate("insert into account(id, name, balance) " +
                     "values(1, 'Tom', 5000000)");
         }
     }
 
     @Test
     public void test() throws Exception {
+        prepare();
         doTest(1);
         doTest(10);
         doTest(100);
@@ -51,20 +55,70 @@ public class PerfTest extends BaseTest {
 
     @Test
     public void testConcur() throws Exception {
+        prepare();
         doTest(100,10);
         doTest(10,100);
         doTest(20,50);
     }
 
+    @Test
+    public void testSQLite() throws Exception {
+        String url = getSQLiteUrl();
+        prepare(url);
+        doTest(1, url);
+        doTest(10, url);
+        doTest(100, url);
+        doTest(1000, url);
+    }
+
+    @Test
+    public void testConcurSQLite() throws Exception {
+        String url = getSQLiteUrl();
+        prepare(url);
+        doTest(100,10, url);
+        doTest(10,100, url);
+        doTest(20,50, url);
+    }
+
+    @Test
+    public void testMySQL() {
+        testMySQL(() -> {
+            String url = getMySQLUrl();
+            prepare(url);
+            doTest(1, url);
+            doTest(10, url);
+            doTest(100, url);
+            doTest(1000, url);
+        });
+    }
+
+    @Test
+    public void testConcurMySQL() {
+        testMySQL(() -> {
+            String url = getMySQLUrl();
+            prepare(url);
+            doTest(100,10, url);
+            doTest(10,100, url);
+            doTest(20,50, url);
+        });
+    }
+
     void doTest(int times) throws Exception {
-        doTest(times, 1);
+        doTest(times, 1, null);
+    }
+
+    void doTest(int times, String url) throws Exception {
+        doTest(times, 1, url);
     }
 
     void doTest(int times, int threads) throws Exception {
-        Callable<?> callable = () -> {
-            String url = getTestUrl();
+        doTest(times, threads, null);
+    }
 
-            try (Connection c = DriverManager.getConnection(url);
+    void doTest(int times, int threads, String url) throws Exception {
+        Callable<?> callable = () -> {
+            String cStr = url == null? getTestUrl(): url;
+            try (Connection c = DriverManager.getConnection(cStr);
                  Statement s = c.createStatement()) {
                 for (int i = 0; i < times; ++i) {
                     ResultSet rs = s.executeQuery("select id, name, balance " +

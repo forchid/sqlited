@@ -3,11 +3,10 @@ package org.sqlite.rmi;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.sql.SQLException;
-import java.util.List;
 
 public interface RMIResultSet extends Remote, AutoCloseable {
 
-    List<Object[]> next() throws RemoteException, SQLException;
+    RowIterator next(boolean meta) throws RemoteException, SQLException;
 
     RMIResultSetMetaData getMetaData() throws RemoteException, SQLException;
 
