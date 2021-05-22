@@ -23,6 +23,9 @@ import org.junit.BeforeClass;
 import org.sqlited.server.SQLited;
 import org.sqlited.util.logging.LoggerFactory;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
@@ -89,6 +92,11 @@ public abstract class BaseTest {
 
     public static String getTestUrl() {
         return getUrl("jdbc:sqlited:///test", "password", password);
+    }
+
+    public static Connection getTestConn() throws SQLException {
+        String url = getTestUrl();
+        return DriverManager.getConnection(url);
     }
 
     public static String getUrl(String base, Object ... args) {

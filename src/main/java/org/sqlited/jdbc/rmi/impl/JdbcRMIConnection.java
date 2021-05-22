@@ -53,6 +53,26 @@ public class JdbcRMIConnection extends ConnectionAdapter {
     }
 
     @Override
+    public boolean getAutoCommit() throws SQLException {
+        return invoke(this.rmiConn::getAutoCommit, this.props);
+    }
+
+    @Override
+    public void setAutoCommit(boolean autoCommit) throws SQLException {
+        invoke(() -> this.rmiConn.setAutoCommit(autoCommit), this.props);
+    }
+
+    @Override
+    public void commit() throws SQLException {
+        invoke(this.rmiConn::commit, this.props);
+    }
+
+    @Override
+    public void rollback() throws SQLException {
+        invoke(this.rmiConn::rollback, this.props);
+    }
+
+    @Override
     public void close() {
         IOUtils.close(this.rmiConn);
     }

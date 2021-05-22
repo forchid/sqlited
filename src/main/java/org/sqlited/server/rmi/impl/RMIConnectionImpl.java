@@ -59,6 +59,26 @@ public class RMIConnectionImpl extends UnicastRemoteObject implements RMIConnect
             if (failed) IOUtils.close(stmt);
         }
     }
+    @Override
+    public boolean getAutoCommit() throws RemoteException, SQLException {
+        return this.sqlConn.getAutoCommit();
+    }
+
+
+    @Override
+    public void setAutoCommit(boolean autoCommit) throws RemoteException, SQLException {
+        this.sqlConn.setAutoCommit(autoCommit);
+    }
+
+    @Override
+    public void commit() throws RemoteException, SQLException {
+        this.sqlConn.commit();
+    }
+
+    @Override
+    public void rollback() throws RemoteException, SQLException {
+        this.sqlConn.rollback();
+    }
 
     @Override
     public void close() throws RemoteException {

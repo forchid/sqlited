@@ -43,7 +43,7 @@ public class JdbcRMIStatement extends StatementAdapter {
             boolean failed = true;
             try {
                 rs = this.rmiStmt.executeQuery(sql);
-                ResultSet r = new JdbcRMIResultSet(this.conn, rs);
+                ResultSet r = new JdbcRMIResultSet(this.conn, this, rs);
                 failed = false;
                 return r;
             } finally {

@@ -11,4 +11,12 @@ public interface RMIConnection extends Remote, AutoCloseable {
     @Override
     void close() throws RemoteException;
 
+    boolean getAutoCommit() throws RemoteException, SQLException;
+
+    void setAutoCommit(boolean autoCommit) throws RemoteException, SQLException;
+
+    void commit() throws RemoteException, SQLException;
+
+    void rollback() throws RemoteException, SQLException;
+
 }

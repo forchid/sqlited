@@ -41,6 +41,7 @@ public class JdbcRMIResultSet extends ResultSetAdapter {
     static final String DATE_FORMAT = "yyyy-MM-dd HH:mm:ss.SSS";
 
     protected final JdbcRMIConnection conn;
+    protected final JdbcRMIStatement statement;
     protected final RMIResultSet rmiRs;
     private volatile boolean closed;
 
@@ -48,9 +49,16 @@ public class JdbcRMIResultSet extends ResultSetAdapter {
     protected RowIterator rowItr;
     private int column;
 
-    public JdbcRMIResultSet(JdbcRMIConnection conn, RMIResultSet rmiRs) {
+    public JdbcRMIResultSet(JdbcRMIConnection conn, JdbcRMIStatement statement,
+                            RMIResultSet rmiRs) {
         this.conn = conn;
+        this.statement = statement;
         this.rmiRs = rmiRs;
+    }
+
+    @Override
+    public JdbcRMIStatement getStatement() throws SQLException {
+        return this.statement;
     }
 
     @Override
