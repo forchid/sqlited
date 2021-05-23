@@ -56,6 +56,8 @@ public final class SocketUtils {
         PropsUtils.setIfAbsent(props, "loginTimeout", "15000");
         PropsUtils.setIfAbsent(props, "connectTimeout", "5000");
         PropsUtils.setIfAbsent(props, "readTimeout", "60000");
+        PropsUtils.setIfAbsent(props, "tcpNoDelay", "true");
+        PropsUtils.setIfAbsent(props, "bufferSize", "4096");
 
         return props;
     }
@@ -105,9 +107,12 @@ public final class SocketUtils {
                 Thread.currentThread().getName(), host, port));
 
         SocketAddress endpoint = new InetSocketAddress(host, port);
-        String connectTimeout = props.getProperty("connectTimeout");
-        int timeout = Integer.decode(connectTimeout);
+        String prop = props.getProperty("connectTimeout");
+        int timeout = Integer.decode(prop);
+        prop = props.getProperty("tcpNoDelay");
+        boolean tcpNoDelay = Boolean.parseBoolean(prop);
         Socket socket = new AuthSocket(props);
+        socket.setTcpNoDelay(tcpNoDelay);
         socket.connect(endpoint, timeout);
 
         return socket;

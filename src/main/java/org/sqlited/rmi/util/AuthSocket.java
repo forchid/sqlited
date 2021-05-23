@@ -38,6 +38,8 @@ public class AuthSocket extends Socket {
 
     protected final long id;
     protected final Properties props;
+    private BufferedInputStream in;
+    private BufferedOutputStream out;
 
     public AuthSocket(Properties props) {
         this.props = props;
@@ -65,6 +67,30 @@ public class AuthSocket extends Socket {
         } finally {
             if (failed) IOUtils.close(this);
         }
+    }
+
+    @Override
+    public InputStream getInputStream() throws IOException {
+        InputStream in = this.in;
+        if (in == null) {
+            String prop = this.props.getProperty("bufferSize");
+            int bufferSize = Integer.decode(prop);
+            InputStream is = super.getInputStream();
+            in = this.in = new BufferedInputStream(is, bufferSize);
+        }
+        return in;
+    }
+
+    @Override
+    public OutputStream getOutputStream() throws IOException {
+        OutputStream out = this.out;
+        if (out == null) {
+            String prop = this.props.getProperty("bufferSize");
+            int bufferSize = Integer.decode(prop);
+            OutputStream os = super.getOutputStream();
+            out = this.out = new BufferedOutputStream(os, bufferSize);
+        }
+        return out;
     }
 
     protected static long nextId() {

@@ -23,9 +23,7 @@ import org.sqlited.util.logging.LoggerFactory;
 import static org.sqlited.rmi.util.SocketUtils.*;
 
 import java.io.*;
-import java.net.InetSocketAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.net.*;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.Arrays;
@@ -55,13 +53,28 @@ public class AuthServerSocket extends ServerSocket {
 
     @Override
     public Socket accept() throws IOException {
-        Socket socket = super.accept();
+        Properties props = this.props;
+        Socket socket = null;
+
         boolean failed = true;
         try {
-            String readTimeout = this.props.getProperty("readTimeout");
-            int soTimeout = Integer.decode(readTimeout);
+            // Do accept
+            if (this.isClosed()) {
+                throw new SocketException("Socket is closed");
+            } else if (!this.isBound()) {
+                throw new SocketException("Socket is not bound yet");
+            } else {
+                socket = new AuthSocket(props);
+                super.implAccept(socket);
+            }
+
+            String prop = props.getProperty("readTimeout");
+            int soTimeout = Integer.decode(prop);
+            prop = props.getProperty("tcpNoDelay");
+            boolean tcpNoDelay = Boolean.parseBoolean(prop);
             socket.setSoTimeout(soTimeout);
-            handshake(this.props, socket, this.secureRandom);
+            socket.setTcpNoDelay(tcpNoDelay);
+            handshake(props, socket, this.secureRandom);
             failed = false;
             return socket;
         } finally {
