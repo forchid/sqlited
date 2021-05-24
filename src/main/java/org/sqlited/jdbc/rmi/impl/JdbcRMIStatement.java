@@ -17,8 +17,8 @@
 package org.sqlited.jdbc.rmi.impl;
 
 import org.sqlited.jdbc.adapter.StatementAdapter;
-import org.sqlited.rmi.RMIResultSet;
 import org.sqlited.rmi.RMIStatement;
+import org.sqlited.rmi.RowIterator;
 import org.sqlited.util.IOUtils;
 
 import static org.sqlited.jdbc.rmi.util.RMIUtils.*;
@@ -39,16 +39,8 @@ public class JdbcRMIStatement extends StatementAdapter {
     @Override
     public ResultSet executeQuery(String sql) throws SQLException {
         return invoke(() -> {
-            RMIResultSet rs = null;
-            boolean failed = true;
-            try {
-                rs = this.rmiStmt.executeQuery(sql);
-                ResultSet r = new JdbcRMIResultSet(this.conn, this, rs);
-                failed = false;
-                return r;
-            } finally {
-                if (failed) IOUtils.close(rs);
-            }
+            RowIterator itr = this.rmiStmt.executeQuery(sql);
+            return new JdbcRMIResultSet(this.conn, this, itr);
         }, this.conn.props);
     }
 

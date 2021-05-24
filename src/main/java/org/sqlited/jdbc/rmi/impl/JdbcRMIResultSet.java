@@ -17,8 +17,8 @@
 package org.sqlited.jdbc.rmi.impl;
 
 import org.sqlited.jdbc.adapter.ResultSetAdapter;
-import org.sqlited.rmi.RMIResultSet;
 import org.sqlited.rmi.RMIResultSetMetaData;
+import org.sqlited.rmi.RMIStatement;
 import org.sqlited.rmi.RowIterator;
 import org.sqlited.util.IOUtils;
 import org.sqlited.jdbc.rmi.util.RMIUtils;
@@ -41,24 +41,27 @@ public class JdbcRMIResultSet extends ResultSetAdapter {
     static final String DATE_FORMAT = "yyyy-MM-dd HH:mm:ss.SSS";
 
     protected final JdbcRMIConnection conn;
-    protected final JdbcRMIStatement statement;
-    protected final RMIResultSet rmiRs;
+    protected final JdbcRMIStatement stmt;
     private volatile boolean closed;
 
     private JdbcRMIResultSetMetaData metaData;
     protected RowIterator rowItr;
     private int column;
 
-    public JdbcRMIResultSet(JdbcRMIConnection conn, JdbcRMIStatement statement,
-                            RMIResultSet rmiRs) {
+    public JdbcRMIResultSet(JdbcRMIConnection conn, JdbcRMIStatement stmt,
+                            RowIterator rowItr) {
         this.conn = conn;
-        this.statement = statement;
-        this.rmiRs = rmiRs;
+        this.stmt = stmt;
+        initRowItr(rowItr);
+    }
+
+    protected RMIStatement rmiStmt() {
+        return this.stmt.rmiStmt;
     }
 
     @Override
     public JdbcRMIStatement getStatement() throws SQLException {
-        return this.statement;
+        return this.stmt;
     }
 
     @Override
@@ -71,18 +74,22 @@ public class JdbcRMIResultSet extends ResultSetAdapter {
 
         if (i == null || !i.hasNext()) {
             boolean meta = this.metaData == null;
-            i = RMIUtils.invoke(() -> this.rmiRs.next(meta), this.conn.props);
-            RMIResultSetMetaData d = i.getMetaData();
-            if (meta && d != null) {
-                this.metaData = new JdbcRMIResultSetMetaData(d);
-            }
-            this.rowItr = i.reset();
+            i = RMIUtils.invoke(() -> rmiStmt().next(meta), this.conn.props);
+            initRowItr(i);
         }
         boolean next = i.hasNext();
         if (next) i.next();
         else IOUtils.close(this);
 
         return next;
+    }
+
+    protected void initRowItr(RowIterator rowItr) {
+        RMIResultSetMetaData d = rowItr.getMetaData();
+        if (d != null) {
+            this.metaData = new JdbcRMIResultSetMetaData(d);
+        }
+        this.rowItr = rowItr.reset();
     }
 
     @Override
@@ -515,7 +522,7 @@ public class JdbcRMIResultSet extends ResultSetAdapter {
     protected JdbcRMIResultSetMetaData initMetaData() throws SQLException {
         if (this.metaData == null) {
             this.metaData = RMIUtils.invoke(() -> {
-                RMIResultSetMetaData metaData = this.rmiRs.getMetaData();
+                RMIResultSetMetaData metaData = rmiStmt().getMetaData();
                 return new JdbcRMIResultSetMetaData(metaData);
             }, this.conn.props);
         }
@@ -537,25 +544,25 @@ public class JdbcRMIResultSet extends ResultSetAdapter {
     @Override
     public int getFetchSize() throws SQLException {
         checkOpen();
-        return RMIUtils.invoke(this.rmiRs::getFetchSize, this.conn.props);
+        return RMIUtils.invoke(rmiStmt()::getFetchSize, this.conn.props);
     }
 
     @Override
     public void setFetchSize(int fetchSize) throws SQLException {
         checkOpen();
-        RMIUtils.invoke(() -> this.rmiRs.setFetchSize(fetchSize), this.conn.props);
+        RMIUtils.invoke(() -> rmiStmt().setFetchSize(fetchSize), this.conn.props);
     }
 
     @Override
     public int getFetchDirection() throws SQLException {
         checkOpen();
-        return RMIUtils.invoke(this.rmiRs::getFetchDirection, this.conn.props);
+        return RMIUtils.invoke(rmiStmt()::getFetchDirection, this.conn.props);
     }
 
     @Override
     public void setFetchDirection(int direction) throws SQLException {
         checkOpen();
-        RMIUtils.invoke(() -> this.rmiRs.setFetchDirection(direction), this.conn.props);
+        RMIUtils.invoke(() -> rmiStmt().setFetchDirection(direction), this.conn.props);
     }
 
     @Override
@@ -593,7 +600,7 @@ public class JdbcRMIResultSet extends ResultSetAdapter {
 
     @Override
     public void close() {
-        IOUtils.close(this.rmiRs);
+        this.rowItr = null;
         this.metaData = null;
         this.column = 0;
         this.closed = true;

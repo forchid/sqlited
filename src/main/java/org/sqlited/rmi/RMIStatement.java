@@ -4,9 +4,9 @@ import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.sql.SQLException;
 
-public interface RMIStatement extends Remote, AutoCloseable {
+public interface RMIStatement extends RMIResultSet, Remote, AutoCloseable {
 
-    RMIResultSet executeQuery(String s) throws RemoteException, SQLException;
+    RowIterator executeQuery(String s) throws RemoteException, SQLException;
 
     int executeUpdate(String s) throws RemoteException, SQLException;
 

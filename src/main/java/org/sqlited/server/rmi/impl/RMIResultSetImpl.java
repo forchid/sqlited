@@ -30,16 +30,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class RMIResultSetImpl extends ConnRemoteObject implements RMIResultSet {
+public class RMIResultSetImpl implements RMIResultSet {
 
     protected static final int FETCH_SIZE_DEFAULT = 50;
     protected static final int FETCH_SIZE_MAXIMUM = 500;
 
     protected final ResultSet rs;
 
-    protected RMIResultSetImpl(RMIConnectionImpl conn, ResultSet rs)
-            throws RemoteException {
-        super(conn);
+    protected RMIResultSetImpl(ResultSet rs) {
         this.rs = rs;
     }
 
@@ -122,11 +120,6 @@ public class RMIResultSetImpl extends ConnRemoteObject implements RMIResultSet {
     }
 
     @Override
-    public void close() throws RemoteException {
-        IOUtils.close(this.rs);
-    }
-
-    @Override
     public int getFetchDirection() throws RemoteException, SQLException {
         return this.rs.getFetchDirection();
     }
@@ -134,6 +127,11 @@ public class RMIResultSetImpl extends ConnRemoteObject implements RMIResultSet {
     @Override
     public void setFetchDirection(int direction) throws RemoteException, SQLException {
         this.rs.setFetchDirection(direction);
+    }
+
+    @Override
+    public void close() throws RemoteException {
+        IOUtils.close(this.rs);
     }
 
 }

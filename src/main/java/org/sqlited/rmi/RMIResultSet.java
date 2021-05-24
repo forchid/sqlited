@@ -12,7 +12,7 @@ public interface RMIResultSet extends Remote, AutoCloseable {
 
     int getFetchSize() throws RemoteException, SQLException;
 
-    void setFetchSize(int fetchSize) throws RemoteException, SQLException;
+    void setFetchSize(int rows) throws RemoteException, SQLException;
 
     int getFetchDirection() throws RemoteException, SQLException;
 

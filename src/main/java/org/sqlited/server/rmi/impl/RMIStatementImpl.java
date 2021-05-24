@@ -17,7 +17,9 @@
 package org.sqlited.server.rmi.impl;
 
 import org.sqlited.rmi.RMIResultSet;
+import org.sqlited.rmi.RMIResultSetMetaData;
 import org.sqlited.rmi.RMIStatement;
+import org.sqlited.rmi.RowIterator;
 import org.sqlited.util.IOUtils;
 
 import java.rmi.RemoteException;
@@ -28,6 +30,7 @@ import java.sql.Statement;
 public class RMIStatementImpl extends ConnRemoteObject implements RMIStatement {
 
     protected final Statement stmt;
+    protected RMIResultSet rs;
 
     protected RMIStatementImpl(RMIConnectionImpl conn, Statement stmt)
             throws RemoteException {
@@ -36,14 +39,15 @@ public class RMIStatementImpl extends ConnRemoteObject implements RMIStatement {
     }
 
     @Override
-    public RMIResultSet executeQuery(String s)
+    public RowIterator executeQuery(String s)
             throws RemoteException, SQLException {
         ResultSet rs = this.stmt.executeQuery(s);
         boolean failed = true;
         try {
-            RMIResultSet r = new RMIResultSetImpl(this.conn, rs);
+            this.rs = new RMIResultSetImpl(rs);
+            RowIterator itr = next(true);
             failed = false;
-            return r;
+            return itr;
         } finally {
             if (failed) IOUtils.close(rs);
         }
@@ -56,7 +60,38 @@ public class RMIStatementImpl extends ConnRemoteObject implements RMIStatement {
     }
 
     @Override
+    public RowIterator next(boolean meta) throws RemoteException, SQLException {
+        return this.rs.next(meta);
+    }
+
+    @Override
+    public RMIResultSetMetaData getMetaData() throws RemoteException, SQLException {
+        return this.rs.getMetaData();
+    }
+
+    @Override
+    public int getFetchSize() throws RemoteException, SQLException {
+        return this.rs.getFetchSize();
+    }
+
+    @Override
+    public void setFetchSize(int rows) throws RemoteException, SQLException {
+        this.rs.setFetchSize(rows);
+    }
+
+    @Override
+    public int getFetchDirection() throws RemoteException, SQLException {
+        return this.rs.getFetchDirection();
+    }
+
+    @Override
+    public void setFetchDirection(int direction) throws RemoteException, SQLException {
+        this.rs.setFetchDirection(direction);
+    }
+
+    @Override
     public void close() throws RemoteException {
+        IOUtils.close(this.rs);
         IOUtils.close(this.stmt);
     }
 
