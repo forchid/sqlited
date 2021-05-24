@@ -16,6 +16,7 @@
 
 package org.sqlited.jdbc;
 
+import org.h2.tools.Server;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -23,6 +24,7 @@ import org.junit.BeforeClass;
 import org.sqlited.server.SQLited;
 import org.sqlited.util.logging.LoggerFactory;
 
+import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -35,6 +37,8 @@ import java.util.logging.Logger;
 
 public abstract class BaseTest {
     static final Logger log = LoggerFactory.getLogger(BaseTest.class);
+    protected static final String workDir = System.getProperty("user.dir");
+    protected static final String baseDir = workDir + File.separator + "temp";
     protected static final String password = "123456";
 
     protected static final String TBL_ACCOUNT_DDL =
@@ -49,6 +53,7 @@ public abstract class BaseTest {
 
     @BeforeClass
     public static void setup() {
+        log.info(() -> String.format("baseDir '%s'", baseDir));
         intruder = new SQLited();
         intruder.parse(new String[]{
                 "-D", "temp", "-P", "3516"
@@ -92,6 +97,27 @@ public abstract class BaseTest {
 
     public static String getTestUrl() {
         return getUrl("jdbc:sqlited:///test", "password", password);
+    }
+
+    public static String getH2Url() {
+        return "jdbc:h2:tcp://localhost:9093/test;user=sa";
+    }
+
+    public static Connection getH2Conn() throws SQLException {
+        String url = getH2Url();
+        return DriverManager.getConnection(url);
+    }
+
+    public static Server startH2Server() throws Exception {
+        Server server = Server.createTcpServer(
+                "-tcpPort", "9093",
+                "-ifNotExists",
+                "-baseDir", getBaseDir());
+        return server.start();
+    }
+
+    public static String getBaseDir() {
+        return baseDir;
     }
 
     public static Connection getTestConn() throws SQLException {

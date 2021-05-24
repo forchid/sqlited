@@ -16,6 +16,7 @@
 
 package org.sqlited.jdbc;
 
+import org.h2.tools.Server;
 import org.junit.Test;
 import static junit.framework.TestCase.*;
 
@@ -30,14 +31,62 @@ import java.util.concurrent.Callable;
 
 public class PerfTest extends BaseTest {
 
-    protected void prepare() throws Exception {
-        prepare(null);
+    @Test
+    public void test() throws Exception {
+        doTest();
     }
 
-    protected void prepare(String url) throws Exception {
-        if (url == null) {
-            url = getTestUrl();
-        }
+    @Test
+    public void testConcur() throws Exception {
+        doTestConcur();
+    }
+
+    @Test
+    public void testSQLite() throws Exception {
+        String url = getSQLiteUrl();
+        doTest(url);
+    }
+
+    @Test
+    public void testConcurSQLite() throws Exception {
+        String url = getSQLiteUrl();
+        doTestConcur(url);
+    }
+
+    @Test
+    public void testH2() throws Exception {
+        Server server = startH2Server();
+        String url = getH2Url();
+        doTest(url);
+        server.stop();
+    }
+
+    @Test
+    public void testConcurH2() throws Exception {
+        Server server = startH2Server();
+        String url = getH2Url();
+        doTestConcur(url);
+        server.stop();
+    }
+
+    @Test
+    public void testMySQL() {
+        testMySQL(() -> {
+            String url = getMySQLUrl();
+            doTest(url);
+        });
+    }
+
+    @Test
+    public void testConcurMySQL() {
+        testMySQL(() -> {
+            String url = getMySQLUrl();
+            doTestConcur(url);
+        });
+    }
+
+    static void prepare(String url) throws Exception {
+        if (url == null) url = getTestUrl();
         try (Connection c = DriverManager.getConnection(url);
              Statement s = c.createStatement()) {
             s.executeUpdate("drop table if exists account");
@@ -48,28 +97,11 @@ public class PerfTest extends BaseTest {
         }
     }
 
-    @Test
-    public void test() throws Exception {
-        prepare();
-        doTest(1);
-        doTest(10);
-        doTest(100);
-        doTest(1000);
-        doTest(10000);
-        doTest(100000);
+    void doTest() throws Exception {
+        doTest(null);
     }
 
-    @Test
-    public void testConcur() throws Exception {
-        prepare();
-        doTest(100,10);
-        doTest(10,100);
-        doTest(20,50);
-    }
-
-    @Test
-    public void testSQLite() throws Exception {
-        String url = getSQLiteUrl();
+    void doTest(String url) throws Exception {
         prepare(url);
         doTest(1, url);
         doTest(10, url);
@@ -79,50 +111,19 @@ public class PerfTest extends BaseTest {
         doTest(100000, url);
     }
 
-    @Test
-    public void testConcurSQLite() throws Exception {
-        String url = getSQLiteUrl();
+    void doTestConcur() throws Exception {
+        doTestConcur(null);
+    }
+
+    void doTestConcur(String url) throws Exception {
         prepare(url);
         doTest(100,10, url);
         doTest(10,100, url);
         doTest(20,50, url);
     }
 
-    @Test
-    public void testMySQL() {
-        testMySQL(() -> {
-            String url = getMySQLUrl();
-            prepare(url);
-            doTest(1, url);
-            doTest(10, url);
-            doTest(100, url);
-            doTest(1000, url);
-            doTest(10000, url);
-            doTest(100000, url);
-        });
-    }
-
-    @Test
-    public void testConcurMySQL() {
-        testMySQL(() -> {
-            String url = getMySQLUrl();
-            prepare(url);
-            doTest(100,10, url);
-            doTest(10,100, url);
-            doTest(20,50, url);
-        });
-    }
-
-    void doTest(int times) throws Exception {
-        doTest(times, 1, null);
-    }
-
     void doTest(int times, String url) throws Exception {
         doTest(times, 1, url);
-    }
-
-    void doTest(int times, int threads) throws Exception {
-        doTest(times, threads, null);
     }
 
     void doTest(int times, int threads, String url) throws Exception {
