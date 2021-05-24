@@ -16,6 +16,8 @@
 
 package org.sqlited.jdbc.adapter;
 
+import org.sqlited.util.logging.LoggerFactory;
+
 import java.sql.*;
 import java.util.Properties;
 import java.util.logging.Logger;
@@ -65,7 +67,8 @@ public abstract class DriverAdapter implements Driver {
 
     @Override
     public Logger getParentLogger() {
-        return null;
+        String root = getClass().getPackage().getName();
+        return LoggerFactory.getLogger(root);
     }
 
 }

@@ -7,8 +7,9 @@
     <groupId>org.sqlited</groupId>
     <artifactId>sqlited</artifactId>
     <version>0.0.1</version>
-    <name>sqlited</name>
+    <packaging>jar</packaging>
     <description>A SQLite server that supports remote access to SQLite</description>
+
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.8</maven.compiler.source>

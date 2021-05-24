@@ -18,20 +18,25 @@ package org.sqlited.jdbc;
 
 import org.sqlited.jdbc.adapter.DriverAdapter;
 import org.sqlited.jdbc.rmi.JdbcRMIDriver;
+import org.sqlited.util.logging.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class Driver extends DriverAdapter {
+    static final Logger log = LoggerFactory.getLogger(Driver.class);
 
     static {
         try {
             Driver driver = new Driver();
             DriverManager.registerDriver(driver);
         } catch (SQLException e) {
-            // Ignore
+            String s = "Register sqlited JDBC driver failed";
+            log.log(Level.WARNING, s, e);
         }
     }
 

@@ -55,6 +55,8 @@ public class PerfTest extends BaseTest {
         doTest(10);
         doTest(100);
         doTest(1000);
+        doTest(10000);
+        doTest(100000);
     }
 
     @Test
@@ -73,6 +75,8 @@ public class PerfTest extends BaseTest {
         doTest(10, url);
         doTest(100, url);
         doTest(1000, url);
+        doTest(10000, url);
+        doTest(100000, url);
     }
 
     @Test
@@ -93,6 +97,8 @@ public class PerfTest extends BaseTest {
             doTest(10, url);
             doTest(100, url);
             doTest(1000, url);
+            doTest(10000, url);
+            doTest(100000, url);
         });
     }
 
