@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.sqlited.rmi;
+package org.sqlited.result;
 
 import java.io.Serializable;
 import java.util.Iterator;
@@ -26,12 +26,12 @@ public class RowIterator implements Iterator<Object[]>, Serializable {
 
     protected final List<Object[]> rows;
     protected final boolean last;
-    protected final RMIResultSetMetaData metaData;
+    protected final ResultSetMetaData metaData;
     // Row cursor
     private transient int index = -1;
 
     public RowIterator(List<Object[]> rows, boolean last,
-                       RMIResultSetMetaData metaData) {
+                       ResultSetMetaData metaData) {
         this.rows = rows;
         this.last = last;
         this.metaData = metaData;
@@ -75,7 +75,7 @@ public class RowIterator implements Iterator<Object[]>, Serializable {
         return this.last;
     }
 
-    public RMIResultSetMetaData getMetaData() {
+    public ResultSetMetaData getMetaData() {
         return this.metaData;
     }
 

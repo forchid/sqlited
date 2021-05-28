@@ -16,16 +16,14 @@
 
 package org.sqlited.rmi;
 
-import org.sqlited.rmi.util.SocketUtils;
+import org.sqlited.net.SocketUtils;
 import org.sqlited.util.logging.LoggerFactory;
 
 import java.io.*;
 import java.net.*;
 
 import java.rmi.server.RMIClientSocketFactory;
-import java.util.Objects;
 import java.util.Properties;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
 
 /**
@@ -33,23 +31,20 @@ import java.util.logging.Logger;
  *
  * @threadsafe
  */
-public class AuthSocketFactory implements RMIClientSocketFactory, Serializable {
+public class AuthSocketFactory extends org.sqlited.net.AuthSocketFactory
+        implements RMIClientSocketFactory, Serializable {
+
     private static final long serialVersionUID = 1L;
+
     static final Logger log = LoggerFactory.getLogger(AuthSocketFactory.class);
-
     static final ThreadLocal<Properties> LOCAL_PROPS = new ThreadLocal<>();
-    private static final AtomicLong ID = new AtomicLong();
-
-    protected final Properties props;
-    protected final long id;
 
     public AuthSocketFactory() {
-        this(null);
+        super(null);
     }
 
     public AuthSocketFactory(Properties props) {
-        this.props = props;
-        this.id = nextId();
+        super(props);
     }
 
     @Override
@@ -59,47 +54,6 @@ public class AuthSocketFactory implements RMIClientSocketFactory, Serializable {
         Properties local = LOCAL_PROPS.get();
         Properties props = SocketUtils.defaultConfig(local);
         return SocketUtils.createSocket(props, host, port);
-    }
-
-    @Override
-    public int hashCode() {
-        Properties props = this.props;
-
-        if (props == null) {
-            return (int)this.id;
-        } else {
-            String url = props.getProperty("url");
-            String user = props.getProperty("user");
-            String password = props.getProperty("password");
-            return (url.hashCode() ^ user.hashCode()
-                    ^ (password == null? 37: password.hashCode()));
-        }
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (o instanceof AuthSocketFactory) {
-            AuthSocketFactory f = (AuthSocketFactory) o;
-            Properties props = this.props;
-            if (props == null || f.props == null) {
-                return f.id == this.id;
-            } else {
-                String url = props.getProperty("url");
-                String user = props.getProperty("user");
-                String password = props.getProperty("password");
-                String oUrl = f.props.getProperty("url");
-                String oUser = f.props.getProperty("user");
-                String oPassword = f.props.getProperty("password");
-                return (url.equals(oUrl) && user.equals(oUser)
-                        && (Objects.equals(password, oPassword)));
-            }
-        } else {
-            return false;
-        }
-    }
-
-    protected static long nextId() {
-        return ID.incrementAndGet();
     }
 
     public static void attachProperties(Properties props) {

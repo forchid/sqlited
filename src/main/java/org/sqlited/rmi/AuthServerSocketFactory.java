@@ -16,7 +16,6 @@
 
 package org.sqlited.rmi;
 
-import org.sqlited.rmi.util.SocketUtils;
 import org.sqlited.util.IOUtils;
 import org.sqlited.util.logging.LoggerFactory;
 
@@ -24,7 +23,6 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.rmi.server.RMIServerSocketFactory;
 import java.util.Properties;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
 /**
@@ -32,28 +30,20 @@ import java.util.logging.Logger;
  *
  * @threadsafe
  */
-public class AuthServerSocketFactory implements RMIServerSocketFactory, AutoCloseable {
+public class AuthServerSocketFactory extends org.sqlited.net.AuthServerSocketFactory
+        implements RMIServerSocketFactory, AutoCloseable {
 
     static final Logger log = LoggerFactory.getLogger(AuthServerSocketFactory.class);
-    private static final AtomicInteger ID = new AtomicInteger();
 
-    protected final int id;
-    private final Properties props;
     private volatile ServerSocket serverSocket;
 
     public AuthServerSocketFactory(Properties props) {
-        this.props = SocketUtils.defaultConfig(props);
-        this.id = nextId();
-    }
-
-    protected static int nextId() {
-        return ID.incrementAndGet();
+        super(props);
     }
 
     @Override
     public ServerSocket createServerSocket(int port) throws IOException {
-        Properties props = this.props;
-        ServerSocket s = SocketUtils.createServerSocket(props, port);
+        ServerSocket s = super.createServerSocket(port);
         return (this.serverSocket = s);
     }
 

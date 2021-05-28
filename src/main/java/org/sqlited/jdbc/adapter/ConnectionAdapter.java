@@ -25,7 +25,9 @@ public abstract class ConnectionAdapter implements Connection {
 
     @Override
     public Statement createStatement() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return createStatement(ResultSet.TYPE_FORWARD_ONLY,
+                ResultSet.CONCUR_READ_ONLY,
+                ResultSet.CLOSE_CURSORS_AT_COMMIT);
     }
 
     @Override
@@ -44,7 +46,7 @@ public abstract class ConnectionAdapter implements Connection {
     }
 
     @Override
-    public void setAutoCommit(boolean b) throws SQLException {
+    public void setAutoCommit(boolean autoCommit) throws SQLException {
         throw new SQLFeatureNotSupportedException();
     }
 
@@ -65,7 +67,7 @@ public abstract class ConnectionAdapter implements Connection {
 
     @Override
     public void close() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        // Ignore
     }
 
     @Override
@@ -119,8 +121,8 @@ public abstract class ConnectionAdapter implements Connection {
     }
 
     @Override
-    public Statement createStatement(int i, int i1) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public Statement createStatement(int rsType, int rsConcur) throws SQLException {
+        return createStatement(rsType, rsConcur, ResultSet.CLOSE_CURSORS_AT_COMMIT);
     }
 
     @Override
@@ -174,7 +176,8 @@ public abstract class ConnectionAdapter implements Connection {
     }
 
     @Override
-    public Statement createStatement(int i, int i1, int i2) throws SQLException {
+    public Statement createStatement(int rsType, int rsConcur, int rsHold)
+            throws SQLException {
         throw new SQLFeatureNotSupportedException();
     }
 

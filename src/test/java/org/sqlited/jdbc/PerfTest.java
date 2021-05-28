@@ -32,13 +32,25 @@ import java.util.concurrent.Callable;
 public class PerfTest extends BaseTest {
 
     @Test
-    public void test() throws Exception {
+    public void testTcp() throws Exception {
         doTest();
     }
 
     @Test
-    public void testConcur() throws Exception {
+    public void testConcurTcp() throws Exception {
         doTestConcur();
+    }
+
+    @Test
+    public void testRMI() throws Exception {
+        String url = getRMIUrl();
+        doTest(url);
+    }
+
+    @Test
+    public void testConcurRMI() throws Exception {
+        String url = getRMIUrl();
+        doTestConcur(url);
     }
 
     @Test
@@ -120,6 +132,7 @@ public class PerfTest extends BaseTest {
         doTest(100,10, url);
         doTest(10,100, url);
         doTest(20,50, url);
+        doTest(1000,150, url);
     }
 
     void doTest(int times, String url) throws Exception {

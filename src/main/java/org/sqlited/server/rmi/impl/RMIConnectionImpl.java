@@ -16,12 +16,11 @@
 
 package org.sqlited.server.rmi.impl;
 
-import org.sqlite.JDBC;
 import org.sqlited.rmi.RMIConnection;
 import org.sqlited.rmi.RMIStatement;
 import org.sqlited.server.Config;
+import org.sqlited.server.util.SQLiteUtils;
 import org.sqlited.util.IOUtils;
-import org.sqlited.util.logging.LoggerFactory;
 
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
@@ -29,11 +28,8 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Properties;
-import java.util.logging.Logger;
 
 public class RMIConnectionImpl extends UnicastRemoteObject implements RMIConnection {
-
-    static final Logger log = LoggerFactory.getLogger(RMIConnectionImpl.class);
 
     protected final Config config;
     protected final Connection sqlConn;
@@ -42,8 +38,7 @@ public class RMIConnectionImpl extends UnicastRemoteObject implements RMIConnect
             throws RemoteException, SQLException {
         super(config.getPort(), config.getRMIClientSocketFactory(),
                 config.getRMIServerSocketFactory());
-        log.fine(() -> String.format("Open DB '%s'", url));
-        this.sqlConn = JDBC.createConnection(url, info);
+        this.sqlConn = SQLiteUtils.open(url, info);
         this.config  = config;
     }
 

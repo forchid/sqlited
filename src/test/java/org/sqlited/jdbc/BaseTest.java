@@ -50,6 +50,7 @@ public abstract class BaseTest {
 
     private static SQLited intruder;
     protected SQLited server;
+    protected SQLited rmiServer;
 
     @BeforeClass
     public static void setup() {
@@ -71,11 +72,19 @@ public abstract class BaseTest {
         this.server.parse(new String[]{
                 "-D", "temp", "-p", password
         }).start();
+
+        this.rmiServer = new SQLited();
+        this.rmiServer.parse(new String[] {
+                "-D", "temp", "-p", password,
+                "--protocol", "rmi", "-P", "3515"
+        });
+        this.rmiServer.start();
     }
 
     @After
     public void destroy() {
         this.server.stop();
+        this.rmiServer.stop();
     }
 
     public static void testMySQL(VoidCallable<?> test) {
@@ -97,6 +106,10 @@ public abstract class BaseTest {
 
     public static String getTestUrl() {
         return getUrl("jdbc:sqlited:///test", "password", password);
+    }
+
+    public static String getRMIUrl() {
+        return getUrl("jdbc:sqlited:rmi:///test", "password", password);
     }
 
     public static String getH2Url() {

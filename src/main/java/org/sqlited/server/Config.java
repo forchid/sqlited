@@ -29,6 +29,8 @@ import java.util.logging.Logger;
 
 public class Config implements Cloneable {
     static final Logger log = LoggerFactory.getLogger(Config.class);
+
+    public static final int PROCESSORS = Runtime.getRuntime().availableProcessors();
     private static final Properties DEFAULT = new Properties();
     private static final String CONFIG_FILE = "config.properties";
 
@@ -45,23 +47,40 @@ public class Config implements Cloneable {
         }
     }
 
-    String protocol = DEFAULT.getProperty("protocol", "rmi");
+    String protocol = DEFAULT.getProperty("protocol", "tcp");
     String host = DEFAULT.getProperty("host", "localhost");
-    int port = Integer.decode(DEFAULT.getProperty("port", "3515"));
+    int port = Integer.decode(DEFAULT.getProperty("port", "3525"));
     String user = DEFAULT.getProperty("user", "root");
     String password = DEFAULT.getProperty("password");
 
     String baseDir = DEFAULT.getProperty("baseDir", System.getProperty("user.dir"));
     String dataDir = DEFAULT.getProperty("dataDir", this.baseDir + File.separator + "data");
 
-    int loginTimeout = Integer.decode(DEFAULT.getProperty("loginTimeout", "15000"));
-    int readTimeout = Integer.decode(DEFAULT.getProperty("readTimeout", "60000"));
+    int loginTimeout = Integer.decode(DEFAULT.getProperty("loginTimeout", "5000"));
+    int readTimeout = Integer.decode(DEFAULT.getProperty("readTimeout", "1800000"));
+    int tcpWorkPool = Integer.decode(DEFAULT.getProperty("tcp.workPool", "520"));
+    int userMaxLength = Integer.decode(DEFAULT.getProperty("userMaxLength", "64"));
 
     RMIServerSocketFactory rmiServerSocketFactory;
     RMIClientSocketFactory rmiClientSocketFactory;
 
     public Config() {
 
+    }
+
+    public Config init() throws IllegalStateException {
+        File baseDir = new File(getBaseDir());
+        if (!baseDir.isDirectory() && !baseDir.mkdirs()) {
+            String s = "Can't make base dir '" + baseDir + "'";
+            throw new IllegalStateException(s);
+        }
+        File dataDir = new File(getDataDir());
+        if (!dataDir.isDirectory() && !dataDir.mkdirs()) {
+            String s = "Can't make data dir '" + dataDir + "'";
+            throw new IllegalStateException(s);
+        }
+
+        return this;
     }
 
     public String getProtocol() {
@@ -100,6 +119,10 @@ public class Config implements Cloneable {
         return this.readTimeout;
     }
 
+    public int getTcpWorkPool() {
+        return this.tcpWorkPool;
+    }
+
     public Properties getConnProperties() {
         final Properties props = new Properties();
 
@@ -109,6 +132,7 @@ public class Config implements Cloneable {
         PropsUtils.setNullSafe(props, "password", this.password);
         props.setProperty("loginTimeout", this.loginTimeout + "");
         props.setProperty("readTimeout", this.readTimeout + "");
+        props.setProperty("userMaxLength", this.userMaxLength + "");
 
         return props;
     }
@@ -148,6 +172,8 @@ public class Config implements Cloneable {
 
         copy.rmiClientSocketFactory = this.rmiClientSocketFactory;
         copy.rmiServerSocketFactory = this.rmiServerSocketFactory;
+        copy.tcpWorkPool = this.tcpWorkPool;
+        copy.userMaxLength = this.userMaxLength;
 
         return copy;
     }

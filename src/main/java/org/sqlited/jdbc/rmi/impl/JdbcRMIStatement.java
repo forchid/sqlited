@@ -17,8 +17,8 @@
 package org.sqlited.jdbc.rmi.impl;
 
 import org.sqlited.jdbc.adapter.StatementAdapter;
+import org.sqlited.result.RowIterator;
 import org.sqlited.rmi.RMIStatement;
-import org.sqlited.rmi.RowIterator;
 import org.sqlited.util.IOUtils;
 
 import static org.sqlited.jdbc.rmi.util.RMIUtils.*;

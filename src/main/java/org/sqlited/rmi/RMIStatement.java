@@ -1,5 +1,7 @@
 package org.sqlited.rmi;
 
+import org.sqlited.result.RowIterator;
+
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.sql.SQLException;

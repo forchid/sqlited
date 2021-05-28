@@ -27,4 +27,15 @@ public interface Server {
 
     boolean isStopped();
 
+    Config getConfig();
+
+    default String getName() {
+        Config c = getConfig();
+        String f = "%s-%s@%s:%s";
+        String proto = c.getProtocol();
+        String host = c.getHost();
+        int port = c.getPort();
+        return String.format(f, NAME, proto, host, port);
+    }
+
 }

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.sqlited.rmi.util;
+package org.sqlited.net;
 
 import org.sqlited.util.IOUtils;
 import org.sqlited.util.PropsUtils;
@@ -103,19 +103,54 @@ public final class SocketUtils {
 
     public static Socket createSocket(Properties props, String host, int port)
             throws IOException {
-        log.fine(() -> String.format("%s: connection to %s:%d",
-                Thread.currentThread().getName(), host, port));
-
         SocketAddress endpoint = new InetSocketAddress(host, port);
+        return createSocket(props, endpoint, null);
+    }
+
+    public static Socket createSocket(Properties props, String host, int port,
+                                      InetAddress localAddress, int localPort)
+            throws IOException {
+        SocketAddress endpoint = new InetSocketAddress(host, port);
+        SocketAddress local = new InetSocketAddress(localAddress, localPort);
+        return createSocket(props, endpoint, local);
+    }
+
+    public static Socket createSocket(Properties props, InetAddress host, int port)
+            throws IOException {
+        SocketAddress endpoint = new InetSocketAddress(host, port);
+        return createSocket(props, endpoint, null);
+    }
+
+    public static Socket createSocket(Properties props, InetAddress host, int port,
+                                      InetAddress localAddress, int localPort)
+            throws IOException {
+        SocketAddress endpoint = new InetSocketAddress(host, port);
+        SocketAddress local = new InetSocketAddress(localAddress, localPort);
+        return createSocket(props, endpoint, local);
+    }
+
+    public static Socket createSocket(Properties props, SocketAddress remote,
+                                      SocketAddress local)
+            throws IOException {
+        log.fine(() -> String.format("%s: connection to %s",
+                Thread.currentThread().getName(), remote));
+
         String prop = props.getProperty("connectTimeout");
         int timeout = Integer.decode(prop);
         prop = props.getProperty("tcpNoDelay");
         boolean tcpNoDelay = Boolean.parseBoolean(prop);
-        Socket socket = new AuthSocket(props);
-        socket.setTcpNoDelay(tcpNoDelay);
-        socket.connect(endpoint, timeout);
+        Socket socket = new AuthSocket(props, true);
 
-        return socket;
+        boolean failed = true;
+        try {
+            socket.setTcpNoDelay(tcpNoDelay);
+            if (local != null) socket.bind(local);
+            socket.connect(remote, timeout);
+            failed = false;
+            return socket;
+        } finally {
+            if (failed) IOUtils.close(socket);
+        }
     }
 
 }

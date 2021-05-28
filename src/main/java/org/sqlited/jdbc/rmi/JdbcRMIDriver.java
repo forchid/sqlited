@@ -24,7 +24,6 @@ import org.sqlited.rmi.RMIConnection;
 import org.sqlited.rmi.RMIDriver;
 import org.sqlited.util.IOUtils;
 import org.sqlited.util.LruCache;
-import org.sqlited.util.PropsUtils;
 import org.sqlited.util.logging.LoggerFactory;
 
 import java.rmi.NoSuchObjectException;
@@ -35,8 +34,6 @@ import java.rmi.registry.Registry;
 import java.rmi.server.RMIClientSocketFactory;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Properties;
 import java.util.logging.Logger;
 
@@ -48,117 +45,18 @@ public class JdbcRMIDriver extends DriverAdapter {
     final LruCache<RMIClientSocketFactory, Registry> regs = new LruCache<>(250);
 
     @Override
-    public Connection connect(String url, Properties info)
+    protected Connection connect(String url, Properties info, Properties connProps)
             throws SQLException {
-        if (!isValidURL(url)) {
-            return null;
-        }
-        // Make a copy
-        Properties copy = new Properties();
-        copy.putAll(info);
-        info = copy;
+        String host = connProps.getProperty("host");
+        int port = Integer.decode(connProps.getProperty("port"));
 
-        // Parse url
-        // jdbc:sqlited:[rmi:][//[HOST][:PORT]/][DB][?a=b&...]
-        int i = DriverAdapter.PREFIX.length();
-        if (url.toLowerCase().startsWith(PREFIX)) {
-            i = PREFIX.length();
-        }
-
-        final int j;
-        if (i < url.length() && url.indexOf('/', i) != -1) {
-            if (url.charAt(i++) != '/' || i >= url.length() || url.charAt(i++) != '/') {
-                throw new SQLException("Malformed url '" + url + "'");
-            }
-            int k = url.indexOf('/', i);
-            if (k == -1) {
-                throw new SQLException("Malformed url '" + url + "'");
-            }
-            j = ++k;
-        } else {
-            j = i;
-        }
-
-        String host = DEFAULT_HOST;
-        int port = DEFAULT_PORT;
-        if (i < j) {
-            String s = url.substring(i, j - 1);
-            int k = s.indexOf(':');
-            if (k != -1) {
-                if (k > 0) {
-                    host = s.substring(0, k);
-                }
-                if (k + 1 < s.length()) {
-                    s = s.substring(k + 1);
-                    port = Integer.decode(s);
-                }
-            }
-        }
-
-        final String path;
-        String user = PropsUtils.remove(info,"user", DEFAULT_USER);
-        String password = PropsUtils.remove(info, "password");
-        String loginTimeout = PropsUtils.remove(info, "loginTimeout");
-        String connectTimeout = PropsUtils.remove(info, "connectTimeout");
-        String readTimeout = PropsUtils.remove(info, "readTimeout");
-        i = url.indexOf('?', j);
-        if (i != -1) {
-            path = url.substring(0, i);
-            String p = url.substring(i + 1);
-            String[] a = p.split("&");
-            List<String> np = new ArrayList<>();
-            for (String s: a) {
-                String[] item = s.split("=", 2);
-                if (item.length == 2) {
-                    String name = item[0];
-                    switch (name) {
-                        case "user":
-                            user = item[1];
-                            break;
-                        case "password":
-                            password = item[1];
-                            break;
-                        case "loginTimeout":
-                            loginTimeout = item[1];
-                            break;
-                        case "connectTimeout":
-                            connectTimeout = item[1];
-                            break;
-                        case "readTimeout":
-                            readTimeout = item[1];
-                            break;
-                        default:
-                            np.add(s);
-                            break;
-                    }
-                } else {
-                    throw new SQLException("Malformed url '" + url + "'");
-                }
-            }
-            url = url.substring(j, i);
-            if (np.size() > 0) {
-                url += "?" + String.join("&", np);
-            }
-        } else {
-            path = url;
-            url = url.substring(j);
-        }
-
-        // Do connect
-        final Properties props = new Properties();
-        props.put("url", path);
-        props.put("user", user);
-        PropsUtils.setNullSafe(props, "password", password);
-        PropsUtils.setNullSafe(props, "loginTimeout", loginTimeout);
-        PropsUtils.setNullSafe(props, "connectTimeout", connectTimeout);
-        PropsUtils.setNullSafe(props, "readTimeout", readTimeout);
         int retries = 0;
         while (true) {
-            RMIClientSocketFactory socketFactory = new AuthSocketFactory(props);
+            RMIClientSocketFactory socketFactory = new AuthSocketFactory(connProps);
             Registry registry = null;
             boolean regCached = true;
             try {
-                AuthSocketFactory.attachProperties(props);
+                AuthSocketFactory.attachProperties(connProps);
                 log.fine(() -> String.format("%s: locate remote registry",
                         Thread.currentThread().getName()));
                 synchronized (this.regs) {
@@ -176,7 +74,7 @@ public class JdbcRMIDriver extends DriverAdapter {
                 RMIConnection rmiConn = rmiDriver.connect(url, info);
                 boolean failed = true;
                 try {
-                    Connection c = new JdbcRMIConnection(props, rmiConn);
+                    Connection c = new JdbcRMIConnection(connProps, rmiConn);
                     failed = false;
                     return c;
                 } finally {
@@ -201,12 +99,13 @@ public class JdbcRMIDriver extends DriverAdapter {
     }
 
     @Override
-    protected boolean isValidURL(String url) {
-        if (super.isValidURL(url)) {
-            return true;
-        } else {
-            return url != null && url.toLowerCase().startsWith(PREFIX);
-        }
+    protected String getPrefix() {
+        return PREFIX;
+    }
+
+    @Override
+    protected int getPort() {
+        return 3515;
     }
 
 }

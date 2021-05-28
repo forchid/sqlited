@@ -16,9 +16,8 @@
 
 package org.sqlited.server.rmi.impl;
 
-import org.sqlited.rmi.RMIResultSetMetaData;
+import org.sqlited.result.RowIterator;
 import org.sqlited.rmi.RMIResultSet;
-import org.sqlited.rmi.RowIterator;
 import org.sqlited.util.IOUtils;
 
 import java.rmi.RemoteException;
@@ -50,7 +49,7 @@ public class RMIResultSetImpl implements RMIResultSet {
             n = Math.min(size, FETCH_SIZE_MAXIMUM);
         }
 
-        final RMIResultSetMetaData metaData;
+        final org.sqlited.result.ResultSetMetaData metaData;
         if (meta && !this.rs.isClosed()) metaData = getMetaData();
         else metaData = null;
 
@@ -75,7 +74,8 @@ public class RMIResultSetImpl implements RMIResultSet {
     }
 
     @Override
-    public RMIResultSetMetaData getMetaData() throws RemoteException, SQLException {
+    public org.sqlited.result.ResultSetMetaData getMetaData()
+            throws RemoteException, SQLException {
         ResultSetMetaData metaData = this.rs.getMetaData();
         int n = metaData.getColumnCount();
 
@@ -106,7 +106,8 @@ public class RMIResultSetImpl implements RMIResultSet {
             scales[i] = metaData.getScale(i + 1);
         }
 
-        return new RMIResultSetMetaData(names, metas, typeNames, types, scales);
+        return new org.sqlited.result.ResultSetMetaData(names, metas,
+                typeNames, types, scales);
     }
 
     @Override

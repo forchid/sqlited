@@ -37,35 +37,50 @@ public class TransactionTest extends BaseTest {
     }
 
     @Test
-    public void test() throws Exception {
-        for (int i = 0; i < 100; ++i) {
-            try (Connection c = getTestConn(); Statement s = c.createStatement()) {
-                c.setAutoCommit(false);
-                count(s, 0);
-                s.executeUpdate("insert into account(id, name, balance) values(1, 'Tom', 100000)");
-                count(s, 1);
-                s.executeUpdate("insert into account(id, name, balance) values(2, 'Ken', 150000)");
-                count(s, 2);
-                s.executeUpdate("update account set balance = balance + 1000 where id = 1");
-                count(s, 2);
-                c.commit();
-
-                count(s, 2);
-                s.executeUpdate("insert into account(id, name, balance) values(3, 'John', 250000)");
-                count(s, 3);
-                s.executeUpdate("update account set balance = balance - 1000 where id = 1");
-                count(s, 3);
-                s.executeUpdate("delete from account where id = 1");
-                count(s, 2);
-                c.rollback();
-                count(s, 2);
-
-                s.executeUpdate("delete from account");
-                count(s, 0);
-                c.commit();
-                count(s, 0);
+    public void testMultiConns() throws Exception {
+        for (int i = 0; i < 1000; ++i) {
+            try (Connection c = getTestConn();
+                 Statement s = c.createStatement()) {
+                doTest(c, s);
             }
         }
+    }
+
+    @Test
+    public void testSingleConn() throws Exception {
+        try (Connection c = getTestConn();
+             Statement s = c.createStatement()) {
+            for (int i = 0; i < 1000; ++i) {
+                doTest(c, s);
+            }
+        }
+    }
+
+    void doTest(Connection c, Statement s) throws SQLException {
+        c.setAutoCommit(false);
+        count(s, 0);
+        s.executeUpdate("insert into account(id, name, balance) values(1, 'Tom', 100000)");
+        count(s, 1);
+        s.executeUpdate("insert into account(id, name, balance) values(2, 'Ken', 150000)");
+        count(s, 2);
+        s.executeUpdate("update account set balance = balance + 1000 where id = 1");
+        count(s, 2);
+        c.commit();
+
+        count(s, 2);
+        s.executeUpdate("insert into account(id, name, balance) values(3, 'John', 250000)");
+        count(s, 3);
+        s.executeUpdate("update account set balance = balance - 1000 where id = 1");
+        count(s, 3);
+        s.executeUpdate("delete from account where id = 1");
+        count(s, 2);
+        c.rollback();
+        count(s, 2);
+
+        s.executeUpdate("delete from account");
+        count(s, 0);
+        c.commit();
+        count(s, 0);
     }
 
     static void count(Statement s, int expected) throws SQLException {

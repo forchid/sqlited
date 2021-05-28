@@ -39,7 +39,7 @@ public class ConnectTest extends BaseTest {
     @Test
     public void testRestart() throws Exception {
         int n = 100;
-        int p = 3525;
+        int p = 35250;
 
         for (int i = 0; i < n; ++i) {
             String u = "test";
@@ -172,7 +172,7 @@ public class ConnectTest extends BaseTest {
         doTestConnect("jdbc:sqlited:///test?journal_mode=wal&password=" + password);
         doTestConnect("jdbc:sqlited:///test?journal_mode=wal&foreign_keys=true&password=" + password);
         doTestConnect("jdbc:sqlited://localhost/test?journal_mode=wal&foreign_keys=true&password=" + password);
-        doTestConnect("jdbc:sqlited://localhost:3515/test?journal_mode=wal&foreign_keys=true&password=" + password);
+        doTestConnect("jdbc:sqlited://localhost:3525/test?journal_mode=wal&foreign_keys=true&password=" + password);
         doTestConnect("jdbc:sqlited:rmi:?password=" + password);
         doTestConnect("jdbc:sqlited:rmi:?journal_mode=wal&password=" + password);
         doTestConnect("jdbc:sqlited:rmi:test?password=" + password);

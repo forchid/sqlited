@@ -14,53 +14,53 @@
  * limitations under the License.
  */
 
-package org.sqlited.jdbc.rmi.impl;
+package org.sqlited.jdbc;
 
 import org.sqlited.jdbc.adapter.ResultSetMetaDataAdapter;
-import org.sqlited.rmi.RMIResultSetMetaData;
+import org.sqlited.result.ResultSetMetaData;
 
 import java.sql.SQLException;
 
-public class JdbcRMIResultSetMetaData extends ResultSetMetaDataAdapter {
+public class JdbcResultSetMetaData extends ResultSetMetaDataAdapter {
 
-    protected final RMIResultSetMetaData rmiMetaData;
+    protected final ResultSetMetaData metaData;
 
-    public JdbcRMIResultSetMetaData(RMIResultSetMetaData rmiMetaData) {
-        this.rmiMetaData = rmiMetaData;
+    public JdbcResultSetMetaData(ResultSetMetaData metaData) {
+        this.metaData = metaData;
     }
 
     @Override
     public int getColumnCount() throws SQLException {
-        return this.rmiMetaData.getColumnCount();
+        return this.metaData.getColumnCount();
     }
 
     public int findColumn(String name) throws SQLException {
-        return this.rmiMetaData.findColumn(name);
+        return this.metaData.findColumn(name);
     }
 
     @Override
     public String getColumnLabel(int columnIndex) throws SQLException {
-        return this.rmiMetaData.getColumnLabel(columnIndex);
+        return this.metaData.getColumnLabel(columnIndex);
     }
 
     @Override
     public String getColumnName(int columnIndex) throws SQLException {
-        return this.rmiMetaData.getColumnName(columnIndex);
+        return this.metaData.getColumnName(columnIndex);
     }
 
     @Override
     public int getColumnType(int columnIndex) throws SQLException {
-        return this.rmiMetaData.getColumnType(columnIndex);
+        return this.metaData.getColumnType(columnIndex);
     }
 
     @Override
     public int getColumnDisplaySize(int columnIndex) throws SQLException {
-        return this.rmiMetaData.getColumnDisplaySize(columnIndex);
+        return this.metaData.getColumnDisplaySize(columnIndex);
     }
 
     @Override
     public int getScale(int column) throws SQLException {
-        return this.rmiMetaData.getScale(column);
+        return this.metaData.getScale(column);
     }
 
 }

@@ -18,11 +18,13 @@ package org.sqlited.jdbc;
 
 import org.sqlited.jdbc.adapter.DriverAdapter;
 import org.sqlited.jdbc.rmi.JdbcRMIDriver;
+import org.sqlited.jdbc.tcp.JdbcTcpDriver;
 import org.sqlited.util.logging.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -41,7 +43,8 @@ public class Driver extends DriverAdapter {
     }
 
     private final java.sql.Driver[] drivers = {
-            new JdbcRMIDriver() // jdbc:sqlited:[rmi:]
+            new JdbcRMIDriver(), // jdbc:sqlited:rmi:
+            new JdbcTcpDriver()  // jdbc:sqlited:[tcp:]
     };
 
     @Override
@@ -55,6 +58,12 @@ public class Driver extends DriverAdapter {
         }
 
         return null;
+    }
+
+    @Override
+    protected Connection connect(String url, Properties info,
+                                 Properties connProps) throws SQLException {
+        throw new SQLFeatureNotSupportedException();
     }
 
 }

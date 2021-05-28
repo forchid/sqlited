@@ -26,7 +26,6 @@ import org.sqlited.util.IOUtils;
 import org.sqlited.util.logging.LoggerFactory;
 
 import static java.lang.Thread.*;
-import java.io.File;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -39,6 +38,7 @@ public class RMIServer implements Server {
     static Logger log = LoggerFactory.getLogger(RMIServer.class);
 
     protected final Config config;
+    protected final String name;
     protected volatile Registry registry;
     private volatile AuthServerSocketFactory serverSocketFactory;
     private volatile Remote driver;
@@ -46,6 +46,7 @@ public class RMIServer implements Server {
 
     public RMIServer(Config config) {
         this.config = config;
+        this.name = getName();
     }
 
     @Override
@@ -54,18 +55,7 @@ public class RMIServer implements Server {
             throw new IllegalStateException("Server stopped");
         }
 
-        Config config = this.config;
-        File baseDir = new File(config.getBaseDir());
-        if (!baseDir.isDirectory() && !baseDir.mkdirs()) {
-            String s = "Can't make base dir '" + baseDir + "'";
-            throw new IllegalStateException(s);
-        }
-        File dataDir = new File(config.getDataDir());
-        if (!dataDir.isDirectory() && !dataDir.mkdirs()) {
-            String s = "Can't make data dir '" + dataDir + "'";
-            throw new IllegalStateException(s);
-        }
-
+        Config config = this.config.init();
         int port = config.getPort();
         Properties props = config.getConnProperties();
         this.serverSocketFactory = new AuthServerSocketFactory(props);
@@ -79,7 +69,7 @@ public class RMIServer implements Server {
             log.fine(() -> String.format("%s: rebind the driver", currentThread().getName()));
             this.registry.rebind(NAME, this.driver);
             String f = "%s: %s v%s listen on %d";
-            log.info(() -> String.format(f, currentThread().getName(), NAME, VERSION, port));
+            log.info(() -> String.format(f, currentThread().getName(), this, VERSION, port));
         } catch (RemoteException e) {
             throw new IllegalStateException(e);
         }
@@ -106,6 +96,16 @@ public class RMIServer implements Server {
     @Override
     public boolean isStopped() {
         return this.stopped;
+    }
+
+    @Override
+    public Config getConfig() {
+        return this.config.clone();
+    }
+
+    @Override
+    public String toString() {
+        return this.name;
     }
 
 }

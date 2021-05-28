@@ -17,6 +17,7 @@
 package org.sqlited.server;
 
 import org.sqlited.server.rmi.RMIServer;
+import org.sqlited.server.tcp.TcpServer;
 
 import java.io.File;
 
@@ -59,12 +60,19 @@ public class SQLited implements Server {
 
     public void start() throws IllegalStateException {
         Config config = this.config;
-        if ("rmi".equals(config.protocol)) {
-            this.server = new RMIServer(config);
-            this.server.start();
-        } else {
-            throw new IllegalStateException("Unknown protocol: " + config.protocol);
+        String protocol = config.protocol;
+
+        switch (protocol) {
+            case "tcp":
+                this.server = new TcpServer(config);
+                break;
+            case "rmi":
+                this.server = new RMIServer(config);
+                break;
+            default:
+                throw new IllegalStateException("Unknown protocol: " + protocol);
         }
+        this.server.start();
     }
 
     public SQLited parse(String[] args) throws IllegalArgumentException {
@@ -77,11 +85,7 @@ public class SQLited implements Server {
                 if (++i >= n) {
                     throw new IllegalArgumentException("No protocol argv");
                 }
-                String p = args[i];
-                if (!p.equals("rmi")) {
-                    throw new IllegalArgumentException("Unknown protocol: " + p);
-                }
-                config.protocol = p;
+                config.protocol = args[i];
             } else if ("--host".equals(arg) || "-h".equals(arg)) {
                 if (++i >= n) {
                     throw new IllegalArgumentException("No host argv");
@@ -138,8 +142,14 @@ public class SQLited implements Server {
         }
     }
 
+    @Override
     public Config getConfig() {
-        return this.config;
+        return this.config.clone();
+    }
+
+    @Override
+    public String toString() {
+        return getName();
     }
 
 }

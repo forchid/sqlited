@@ -16,12 +16,11 @@
 
 package org.sqlited.server.rmi.impl;
 
-import org.sqlite.JDBC;
 import org.sqlited.rmi.RMIConnection;
 import org.sqlited.rmi.RMIDriver;
 import org.sqlited.server.Config;
+import org.sqlited.server.util.SQLiteUtils;
 
-import java.io.File;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.sql.SQLException;
@@ -41,19 +40,7 @@ public class RMIDriverImpl extends UnicastRemoteObject implements RMIDriver {
     public RMIConnection connect(String url, Properties info)
             throws RemoteException, SQLException {
         Config config = this.config;
-        String db = url;
-        int i = url.indexOf('?');
-
-        if (i != -1) {
-            db = url.substring(0, i);
-        }
-        if (!"".equals(db) && !":memory:".equals(db)) {
-            url = config.getDataDir() + File.separator + url;
-        }
-        if (!url.startsWith(JDBC.PREFIX)) {
-            url = JDBC.PREFIX + url;
-        }
-
+        url = SQLiteUtils.wrapURL(config.getDataDir(), url);
         return new RMIConnectionImpl(config, url, info);
     }
 

@@ -16,10 +16,10 @@
 
 package org.sqlited.server.rmi.impl;
 
+import org.sqlited.result.ResultSetMetaData;
+import org.sqlited.result.RowIterator;
 import org.sqlited.rmi.RMIResultSet;
-import org.sqlited.rmi.RMIResultSetMetaData;
 import org.sqlited.rmi.RMIStatement;
-import org.sqlited.rmi.RowIterator;
 import org.sqlited.util.IOUtils;
 
 import java.rmi.RemoteException;
@@ -65,7 +65,7 @@ public class RMIStatementImpl extends ConnRemoteObject implements RMIStatement {
     }
 
     @Override
-    public RMIResultSetMetaData getMetaData() throws RemoteException, SQLException {
+    public ResultSetMetaData getMetaData() throws RemoteException, SQLException {
         return this.rs.getMetaData();
     }
 

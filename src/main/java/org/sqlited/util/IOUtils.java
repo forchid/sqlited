@@ -16,6 +16,9 @@
 
 package org.sqlited.util;
 
+import java.io.IOException;
+import java.net.Socket;
+
 public final class IOUtils {
 
     private IOUtils() {}
@@ -23,9 +26,19 @@ public final class IOUtils {
     public static void close(AutoCloseable closeable) {
         if (closeable != null) {
             try {
-                closeable.close();
-            } catch (Exception ignore) {
+                if (closeable instanceof Socket) {
+                    Socket so = (Socket) closeable;
+                    so.shutdownInput();
+                    so.shutdownOutput();
+                }
+            } catch (IOException ignore) {
                 // Ignore
+            } finally {
+                try {
+                    closeable.close();
+                } catch (Exception ignore) {
+                    // Ignore
+                }
             }
         }
     }
