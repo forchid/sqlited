@@ -38,8 +38,18 @@ public class TransactionTest extends BaseTest {
 
     @Test
     public void testMultiConns() throws Exception {
-        for (int i = 0; i < 1000; ++i) {
-            try (Connection c = getTestConn();
+        doTestMultiConns(getTestUrl());
+    }
+
+    @Test
+    public void testMultiConnsRMI() throws Exception {
+        doTestMultiConns(getRMIUrl());
+    }
+
+    void doTestMultiConns(String url) throws Exception {
+        int n = 1000;
+        for (int i = 0; i < n; ++i) {
+            try (Connection c = getConn(url);
                  Statement s = c.createStatement()) {
                 doTest(c, s);
             }
@@ -48,9 +58,19 @@ public class TransactionTest extends BaseTest {
 
     @Test
     public void testSingleConn() throws Exception {
-        try (Connection c = getTestConn();
+        doTestSingleConn(getTestConn());
+    }
+
+    @Test
+    public void testSingleConnRMI() throws Exception {
+        doTestSingleConn(getRMIConn());
+    }
+
+    void doTestSingleConn(Connection conn) throws Exception {
+        int n = 1000;
+        try (Connection c = conn;
              Statement s = c.createStatement()) {
-            for (int i = 0; i < 1000; ++i) {
+            for (int i = 0; i < n; ++i) {
                 doTest(c, s);
             }
         }
@@ -59,25 +79,35 @@ public class TransactionTest extends BaseTest {
     void doTest(Connection c, Statement s) throws SQLException {
         c.setAutoCommit(false);
         count(s, 0);
-        s.executeUpdate("insert into account(id, name, balance) values(1, 'Tom', 100000)");
+        int n = s.executeUpdate("insert into account(id, name, balance) values(1, 'Tom', 100000)");
+        assertEquals(1, n);
         count(s, 1);
-        s.executeUpdate("insert into account(id, name, balance) values(2, 'Ken', 150000)");
+        n = s.executeUpdate("insert into account(id, name, balance) values(2, 'Ken', 150000)");
+        assertEquals(1, n);
         count(s, 2);
-        s.executeUpdate("update account set balance = balance + 1000 where id = 1");
+        n = s.executeUpdate("update account set balance = balance + 1000 where id = 1");
+        assertEquals(1, n);
         count(s, 2);
         c.commit();
 
         count(s, 2);
-        s.executeUpdate("insert into account(id, name, balance) values(3, 'John', 250000)");
+        n = s.executeUpdate("insert into account(id, name, balance) values(3, 'John', 250000)");
+        assertEquals(1, n);
         count(s, 3);
-        s.executeUpdate("update account set balance = balance - 1000 where id = 1");
+        n = s.executeUpdate("update account set balance = balance - 1000 where id = 1");
+        assertEquals(1, n);
         count(s, 3);
-        s.executeUpdate("delete from account where id = 1");
+        n = s.executeUpdate("update account set balance = balance - 1000 where id = 4");
+        assertEquals(0, n);
+        count(s, 3);
+        n = s.executeUpdate("delete from account where id = 1");
+        assertEquals(1, n);
         count(s, 2);
         c.rollback();
         count(s, 2);
 
-        s.executeUpdate("delete from account");
+        n = s.executeUpdate("delete from account");
+        assertEquals(2, n);
         count(s, 0);
         c.commit();
         count(s, 0);

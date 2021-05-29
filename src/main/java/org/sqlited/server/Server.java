@@ -16,12 +16,14 @@
 
 package org.sqlited.server;
 
-public interface Server {
+public interface Server extends Runnable {
 
     String NAME = "SQLited";
     String VERSION = "0.0.1";
 
-    void start() throws IllegalStateException;
+    void init() throws IllegalStateException;
+
+    Server start() throws IllegalStateException;
 
     void stop() throws IllegalStateException;
 

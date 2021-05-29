@@ -17,7 +17,8 @@
 package org.sqlited.jdbc;
 
 import org.junit.Test;
-import org.sqlited.server.SQLited;
+import org.sqlited.server.Config;
+import org.sqlited.server.Server;
 import org.sqlited.util.logging.LoggerFactory;
 
 import java.sql.*;
@@ -38,15 +39,25 @@ public class ConnectTest extends BaseTest {
 
     @Test
     public void testRestart() throws Exception {
+        doTestRestart("tcp");
+    }
+
+    @Test
+    public void testRestartRMI() throws Exception {
+        doTestRestart("rmi");
+    }
+
+    void doTestRestart(String proto) throws Exception {
         int n = 100;
         int p = 35250;
 
         for (int i = 0; i < n; ++i) {
             String u = "test";
-            final SQLited d = new SQLited();
-            d.parse(new String[]{ "-P", p + "", "-D", "temp", "-u", u });
-            d.start();
-            String url = getUrl("jdbc:sqlited://:" + p + "/test");
+            Server d = Config.start(new String[]{
+                    "-P", p + "", "-D", "temp", "-u", u, "-x", proto
+            });
+            String f = "jdbc:sqlited:%s://:%d/test";
+            String url = getUrl(String.format(f, proto, p));
             Properties info = new Properties();
             info.put("user", u);
             try (Connection c = DriverManager.getConnection(url, info);

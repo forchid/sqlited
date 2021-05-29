@@ -166,7 +166,7 @@ public class AuthSocket extends Socket {
         socket.setSoTimeout(Integer.decode(loginTimeout));
         final int clientVersion = ch.readByte(true); // protocol version
         if (serverVersion != clientVersion) {
-            String s = "Protocol version mismatched";
+            String s = "Protocol version error";
             ch.writeError(s);
             throw new IOException(s);
         }
@@ -216,7 +216,7 @@ public class AuthSocket extends Socket {
         final int clientVersion = 0x01;
         int serverVersion = ch.readByte(true);
         if (serverVersion != clientVersion) {
-            String s = "Unknown server protocol version " + serverVersion;
+            String s = "Unknown server protocol " + serverVersion;
             throw new IOException(s);
         }
         int mCode = ch.readByte(true);

@@ -24,8 +24,8 @@ class ConnRemoteObject extends UnicastRemoteObject {
     protected final RMIConnectionImpl conn;
 
     protected ConnRemoteObject(RMIConnectionImpl conn) throws RemoteException {
-        super(conn.config.getPort(), conn.config.getRMIClientSocketFactory(),
-                conn.config.getRMIServerSocketFactory());
+        super(conn.config.getPort(), conn.clientSocketFactory,
+                conn.serverSocketFactory);
         this.conn = conn;
     }
 

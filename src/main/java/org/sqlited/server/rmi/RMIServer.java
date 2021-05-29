@@ -43,6 +43,7 @@ public class RMIServer implements Server {
     private volatile AuthServerSocketFactory serverSocketFactory;
     private volatile Remote driver;
     private volatile boolean stopped;
+    private volatile boolean inited;
 
     public RMIServer(Config config) {
         this.config = config;
@@ -50,9 +51,12 @@ public class RMIServer implements Server {
     }
 
     @Override
-    public void start() throws IllegalStateException {
+    public void init() throws IllegalStateException {
         if (this.stopped) {
             throw new IllegalStateException("Server stopped");
+        }
+        if (this.inited) {
+            return;
         }
 
         Config config = this.config.init();
@@ -60,19 +64,24 @@ public class RMIServer implements Server {
         Properties props = config.getConnProperties();
         this.serverSocketFactory = new AuthServerSocketFactory(props);
         RMIClientSocketFactory clientFactory = new AuthSocketFactory();
-        config.setRMIServerSocketFactory(this.serverSocketFactory);
-        config.setRMIClientSocketFactory(clientFactory);
         try {
             log.fine(() -> String.format("%s: create a registry", currentThread().getName()));
             this.registry = LocateRegistry.createRegistry(port, clientFactory, this.serverSocketFactory);
-            this.driver = new RMIDriverImpl(config);
+            this.driver = new RMIDriverImpl(config, clientFactory, this.serverSocketFactory);
             log.fine(() -> String.format("%s: rebind the driver", currentThread().getName()));
             this.registry.rebind(NAME, this.driver);
             String f = "%s: %s v%s listen on %d";
             log.info(() -> String.format(f, currentThread().getName(), this, VERSION, port));
+            this.inited = true;
         } catch (RemoteException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    @Override
+    public RMIServer start() throws IllegalStateException {
+        init();
+        return this;
     }
 
     @Override
@@ -100,12 +109,17 @@ public class RMIServer implements Server {
 
     @Override
     public Config getConfig() {
-        return this.config.clone();
+        return this.config;
     }
 
     @Override
     public String toString() {
         return this.name;
+    }
+
+    @Override
+    public void run() {
+        start();
     }
 
 }

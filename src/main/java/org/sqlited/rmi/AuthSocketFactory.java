@@ -40,7 +40,7 @@ public class AuthSocketFactory extends org.sqlited.net.AuthSocketFactory
     static final ThreadLocal<Properties> LOCAL_PROPS = new ThreadLocal<>();
 
     public AuthSocketFactory() {
-        super(null);
+
     }
 
     public AuthSocketFactory(Properties props) {

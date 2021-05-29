@@ -16,12 +16,12 @@
 
 package org.sqlited.jdbc;
 
-import org.h2.tools.Server;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.sqlited.server.SQLited;
+import org.sqlited.server.Config;
+import org.sqlited.server.Server;
 import org.sqlited.util.logging.LoggerFactory;
 
 import java.io.File;
@@ -48,17 +48,14 @@ public abstract class BaseTest {
                     "balance decimal(12,1) not null default 0," +
                     "create_at datetime)";
 
-    private static SQLited intruder;
-    protected SQLited server;
-    protected SQLited rmiServer;
+    private static Server intruder;
+    protected Server server;
+    protected Server rmiServer;
 
     @BeforeClass
     public static void setup() {
         log.info(() -> String.format("baseDir '%s'", baseDir));
-        intruder = new SQLited();
-        intruder.parse(new String[]{
-                "-D", "temp", "-P", "3516"
-        }).start();
+        intruder = Config.start(new String[]{"-D", "temp", "-P", "3516"});
     }
 
     @AfterClass
@@ -68,17 +65,13 @@ public abstract class BaseTest {
 
     @Before
     public void init() {
-        this.server = new SQLited();
-        this.server.parse(new String[]{
+        this.server = Config.start(new String[]{
                 "-D", "temp", "-p", password
-        }).start();
-
-        this.rmiServer = new SQLited();
-        this.rmiServer.parse(new String[] {
-                "-D", "temp", "-p", password,
-                "--protocol", "rmi", "-P", "3515"
         });
-        this.rmiServer.start();
+        this.rmiServer = Config.start(new String[] {
+                "-D", "temp", "-p", password,
+                "-x", "rmi",  "-P", "3515"
+        });
     }
 
     @After
@@ -108,6 +101,19 @@ public abstract class BaseTest {
         return getUrl("jdbc:sqlited:///test", "password", password);
     }
 
+    public static String getTcpUrl() {
+        return getUrl("jdbc:sqlited:tcp:///test", "password", password);
+    }
+
+    public static Connection getConn(String url) throws SQLException {
+        return DriverManager.getConnection(url);
+    }
+
+    public static Connection getTcpConn() throws SQLException {
+        String url = getTcpUrl();
+        return getConn(url);
+    }
+
     public static String getRMIUrl() {
         return getUrl("jdbc:sqlited:rmi:///test", "password", password);
     }
@@ -118,11 +124,11 @@ public abstract class BaseTest {
 
     public static Connection getH2Conn() throws SQLException {
         String url = getH2Url();
-        return DriverManager.getConnection(url);
+        return getConn(url);
     }
 
-    public static Server startH2Server() throws Exception {
-        Server server = Server.createTcpServer(
+    public static org.h2.tools.Server startH2Server() throws Exception {
+        org.h2.tools.Server server = org.h2.tools.Server.createTcpServer(
                 "-tcpPort", "9093",
                 "-ifNotExists",
                 "-baseDir", getBaseDir());
@@ -135,7 +141,12 @@ public abstract class BaseTest {
 
     public static Connection getTestConn() throws SQLException {
         String url = getTestUrl();
-        return DriverManager.getConnection(url);
+        return getConn(url);
+    }
+
+    public static Connection getRMIConn() throws SQLException {
+        String url = getRMIUrl();
+        return getConn(url);
     }
 
     public static String getUrl(String base, Object ... args) {

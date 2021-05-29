@@ -23,6 +23,8 @@ import org.sqlited.server.util.SQLiteUtils;
 import org.sqlited.util.IOUtils;
 
 import java.rmi.RemoteException;
+import java.rmi.server.RMIClientSocketFactory;
+import java.rmi.server.RMIServerSocketFactory;
 import java.rmi.server.UnicastRemoteObject;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -31,15 +33,20 @@ import java.util.Properties;
 
 public class RMIConnectionImpl extends UnicastRemoteObject implements RMIConnection {
 
+    protected final RMIClientSocketFactory clientSocketFactory;
+    protected final RMIServerSocketFactory serverSocketFactory;
     protected final Config config;
     protected final Connection sqlConn;
 
-    protected RMIConnectionImpl(Config config, String url, Properties info)
+    protected RMIConnectionImpl(String url, Properties info, Config config,
+                                RMIClientSocketFactory clientSocketFactory,
+                                RMIServerSocketFactory serverSocketFactory)
             throws RemoteException, SQLException {
-        super(config.getPort(), config.getRMIClientSocketFactory(),
-                config.getRMIServerSocketFactory());
+        super(config.getPort(), clientSocketFactory, serverSocketFactory);
         this.sqlConn = SQLiteUtils.open(url, info);
         this.config  = config;
+        this.clientSocketFactory = clientSocketFactory;
+        this.serverSocketFactory = serverSocketFactory;
     }
 
     @Override

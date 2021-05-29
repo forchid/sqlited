@@ -39,7 +39,7 @@ import java.util.logging.Logger;
 
 import static java.lang.Thread.currentThread;
 
-public class TcpServer implements Server, Runnable {
+public class TcpServer implements Server {
     static final Logger log = LoggerFactory.getLogger(TcpServer.class);
     static final AtomicLong WORKER_ID = new AtomicLong();
 
@@ -50,6 +50,7 @@ public class TcpServer implements Server, Runnable {
 
     protected volatile ServerSocket server;
     private volatile ThreadPoolExecutor workPool;
+    private volatile boolean inited;
     private volatile boolean stopped;
 
     public TcpServer(Config config) {
@@ -58,9 +59,12 @@ public class TcpServer implements Server, Runnable {
     }
 
     @Override
-    public void start() throws IllegalStateException {
+    public void init() throws IllegalStateException {
         if (this.stopped) {
             throw new IllegalStateException("Server stopped");
+        }
+        if (this.inited) {
+            return;
         }
 
         Config config = this.config.init();
@@ -82,16 +86,22 @@ public class TcpServer implements Server, Runnable {
                         worker.setDaemon(true);
                         return worker;
                     });
-            Thread acceptor = new Thread(this, this.name);
-            acceptor.start();
             String f = "%s: %s v%s listen on %d";
             log.info(() -> String.format(f, currentThread().getName(), this, VERSION, port));
+            this.inited = true;
             failed = false;
         } catch (IOException e) {
             throw new IllegalStateException(e);
         } finally {
             if (failed) IOUtils.close(this.server);
         }
+    }
+
+    @Override
+    public TcpServer start() throws IllegalStateException {
+        init();
+        new Thread(this, this.name).start();
+        return this;
     }
 
     @Override
@@ -109,13 +119,14 @@ public class TcpServer implements Server, Runnable {
 
     @Override
     public Config getConfig() {
-        return this.config.clone();
+        return this.config;
     }
 
     @Override
     public void run() {
-        ServerSocket server = this.server;
+        init();
         try {
+            ServerSocket server = this.server;
             while (!this.stopped) {
                 Socket conn = server.accept();
                 boolean failed = true;
@@ -135,7 +146,7 @@ public class TcpServer implements Server, Runnable {
                 log.log(Level.WARNING, s, e);
             }
         } finally {
-            IOUtils.close(server);
+            stop();
         }
     }
 

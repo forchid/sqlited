@@ -22,18 +22,25 @@ import org.sqlited.server.Config;
 import org.sqlited.server.util.SQLiteUtils;
 
 import java.rmi.RemoteException;
+import java.rmi.server.RMIClientSocketFactory;
+import java.rmi.server.RMIServerSocketFactory;
 import java.rmi.server.UnicastRemoteObject;
 import java.sql.SQLException;
 import java.util.Properties;
 
 public class RMIDriverImpl extends UnicastRemoteObject implements RMIDriver {
 
+    protected final RMIClientSocketFactory clientSocketFactory;
+    protected final RMIServerSocketFactory serverSocketFactory;
     protected final Config config;
 
-    public RMIDriverImpl(Config config) throws RemoteException {
-        super(config.getPort(), config.getRMIClientSocketFactory(),
-                config.getRMIServerSocketFactory());
+    public RMIDriverImpl(Config config, RMIClientSocketFactory clientSocketFactory,
+                         RMIServerSocketFactory serverSocketFactory)
+            throws RemoteException {
+        super(config.getPort(), clientSocketFactory, serverSocketFactory);
         this.config = config;
+        this.clientSocketFactory = clientSocketFactory;
+        this.serverSocketFactory = serverSocketFactory;
     }
 
     @Override
@@ -41,7 +48,8 @@ public class RMIDriverImpl extends UnicastRemoteObject implements RMIDriver {
             throws RemoteException, SQLException {
         Config config = this.config;
         url = SQLiteUtils.wrapURL(config.getDataDir(), url);
-        return new RMIConnectionImpl(config, url, info);
+        return new RMIConnectionImpl(url, info, config,
+                this.clientSocketFactory, this.serverSocketFactory);
     }
 
 }
