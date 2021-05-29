@@ -3,6 +3,7 @@ package org.sqlited.rmi;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.sql.SQLException;
+import java.sql.Savepoint;
 
 public interface RMIConnection extends Remote, AutoCloseable {
 
@@ -18,5 +19,11 @@ public interface RMIConnection extends Remote, AutoCloseable {
     void commit() throws RemoteException, SQLException;
 
     void rollback() throws RemoteException, SQLException;
+
+    Savepoint setSavepoint(String name) throws RemoteException, SQLException;
+
+    void rollback(Savepoint savepoint) throws RemoteException, SQLException;
+
+    void releaseSavepoint(Savepoint savepoint) throws RemoteException, SQLException;
 
 }

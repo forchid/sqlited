@@ -20,10 +20,7 @@ import org.junit.Before;
 import org.junit.Test;
 import static junit.framework.TestCase.*;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 
 public class TransactionTest extends BaseTest {
 
@@ -46,12 +43,26 @@ public class TransactionTest extends BaseTest {
         doTestMultiConns(getRMIUrl());
     }
 
+    @Test
+    public void testMultiConnsSavepoint() throws Exception {
+        doTestMultiConns(getTestUrl(), true);
+    }
+
+    @Test
+    public void testMultiConnsSavepointRMI() throws Exception {
+        doTestMultiConns(getRMIUrl(), true);
+    }
+
     void doTestMultiConns(String url) throws Exception {
+        doTestMultiConns(url, false);
+    }
+
+    void doTestMultiConns(String url, boolean testSp) throws Exception {
         int n = 1000;
         for (int i = 0; i < n; ++i) {
             try (Connection c = getConn(url);
                  Statement s = c.createStatement()) {
-                doTest(c, s);
+                doTest(c, s, testSp);
             }
         }
     }
@@ -66,17 +77,31 @@ public class TransactionTest extends BaseTest {
         doTestSingleConn(getRMIConn());
     }
 
+    @Test
+    public void testSingleConnSavepoint() throws Exception {
+        doTestSingleConn(getTestConn(), true);
+    }
+
+    @Test
+    public void testSingleConnSavepointRMI() throws Exception {
+        doTestSingleConn(getRMIConn(), true);
+    }
+
     void doTestSingleConn(Connection conn) throws Exception {
+        doTestSingleConn(conn, false);
+    }
+
+    void doTestSingleConn(Connection conn, boolean testSp) throws Exception {
         int n = 1000;
         try (Connection c = conn;
              Statement s = c.createStatement()) {
             for (int i = 0; i < n; ++i) {
-                doTest(c, s);
+                doTest(c, s, testSp);
             }
         }
     }
 
-    void doTest(Connection c, Statement s) throws SQLException {
+    void doTest(Connection c, Statement s, boolean testSp) throws SQLException {
         c.setAutoCommit(false);
         count(s, 0);
         int n = s.executeUpdate("insert into account(id, name, balance) values(1, 'Tom', 100000)");
@@ -88,6 +113,14 @@ public class TransactionTest extends BaseTest {
         n = s.executeUpdate("update account set balance = balance + 1000 where id = 1");
         assertEquals(1, n);
         count(s, 2);
+        if (testSp) {
+            Savepoint sp = c.setSavepoint("'sp-1'");
+            n = s.executeUpdate("insert into account(id, name, balance) values(3, 'John', 250000)");
+            assertEquals(1, n);
+            count(s, 3);
+            c.rollback(sp);
+            count(s, 2);
+        }
         c.commit();
 
         count(s, 2);
@@ -103,12 +136,28 @@ public class TransactionTest extends BaseTest {
         n = s.executeUpdate("delete from account where id = 1");
         assertEquals(1, n);
         count(s, 2);
+        if (testSp) {
+            Savepoint sp = c.setSavepoint("sp1");
+            n = s.executeUpdate("delete from account where id = 2");
+            assertEquals(1, n);
+            count(s, 1);
+            c.releaseSavepoint(sp);
+            count(s, 1);
+        }
         c.rollback();
         count(s, 2);
 
         n = s.executeUpdate("delete from account");
         assertEquals(2, n);
         count(s, 0);
+        if (testSp) {
+            Savepoint sp = c.setSavepoint();
+            n = s.executeUpdate("delete from account where id = 1");
+            assertEquals(0, n);
+            count(s, 0);
+            c.rollback(sp);
+            count(s, 0);
+        }
         c.commit();
         count(s, 0);
     }

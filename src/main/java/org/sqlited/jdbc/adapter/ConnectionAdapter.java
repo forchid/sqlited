@@ -157,11 +157,11 @@ public abstract class ConnectionAdapter implements Connection {
 
     @Override
     public Savepoint setSavepoint() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return setSavepoint(null);
     }
 
     @Override
-    public Savepoint setSavepoint(String s) throws SQLException {
+    public Savepoint setSavepoint(String name) throws SQLException {
         throw new SQLFeatureNotSupportedException();
     }
 

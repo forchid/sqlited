@@ -17,15 +17,13 @@
 package org.sqlited.jdbc.tcp.impl;
 
 import org.sqlited.io.Transfer;
+import org.sqlited.jdbc.JdbcSavepoint;
 import org.sqlited.jdbc.adapter.ConnectionAdapter;
 import org.sqlited.util.IOUtils;
 
 import java.io.IOException;
 import java.net.Socket;
-import java.sql.SQLException;
-import java.sql.SQLNonTransientConnectionException;
-import java.sql.Savepoint;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.Map;
 import java.util.Properties;
 
@@ -149,9 +147,7 @@ public class JdbcTcpConnection extends ConnectionAdapter {
 
     @Override
     public void rollback(Savepoint savepoint) throws SQLException {
-        if (savepoint == null) {
-            throw new NullPointerException("savepoint null");
-        }
+        if (savepoint == null) throw new NullPointerException();
         doRollback(savepoint);
     }
 
@@ -171,6 +167,40 @@ public class JdbcTcpConnection extends ConnectionAdapter {
             readOK();
         } catch (IOException e) {
             String s = "Rollback error";
+            throw handle(s, e);
+        }
+    }
+
+    @Override
+    public Savepoint setSavepoint(String name) throws SQLException {
+        Transfer ch = this.ch;
+        try {
+            ch.writeByte(Transfer.CMD_SET_SP)
+                    .writeString(name)
+                    .flush();
+            long[] a = readOK();
+            int id = (int)a[0];
+            return new JdbcSavepoint(id, name);
+        } catch (IOException e) {
+            String s = "Set savepoint error";
+            throw handle(s, e);
+        }
+    }
+
+    @Override
+    public void releaseSavepoint(Savepoint savepoint) throws SQLException {
+        if (savepoint == null) throw new NullPointerException();
+        Transfer ch = this.ch;
+        try {
+            int id = savepoint.getSavepointId();
+            String name = savepoint.getSavepointName();
+            ch.writeByte(Transfer.CMD_REL_SP)
+                    .writeInt(id)
+                    .writeString(name)
+                    .flush();
+            readOK();
+        } catch (IOException e) {
+            String s = "Release savepoint error";
             throw handle(s, e);
         }
     }

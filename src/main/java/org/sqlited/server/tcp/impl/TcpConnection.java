@@ -19,7 +19,6 @@ package org.sqlited.server.tcp.impl;
 import org.sqlited.io.Protocol;
 import org.sqlited.io.Transfer;
 import org.sqlited.server.Config;
-import org.sqlited.server.tcp.TcpServer;
 import org.sqlited.server.util.SQLiteUtils;
 import org.sqlited.util.IOUtils;
 import org.sqlited.util.logging.LoggerFactory;
@@ -123,6 +122,7 @@ public class TcpConnection implements Protocol, Runnable, AutoCloseable {
                 }
             } catch (SQLException e) {
                 ch.writeError(e);
+                log.log(Level.FINE, "SQL error", e);
             }
         }
     }
@@ -131,15 +131,15 @@ public class TcpConnection implements Protocol, Runnable, AutoCloseable {
         // In: id, name
         Transfer ch = this.ch;
         int id = ch.readInt();
-        String name = ch.readString();
+        ch.readString();
         Savepoint sp = this.spMap.remove(id);
-
         if (sp == null) {
-            String s = "Savepoint '" + name + "' has released, rollback or not set";
+            String s = "Savepoint has released, rollback, or not set";
             throw new SQLException(s);
-        } else {
-            this.sqlConn.releaseSavepoint(sp);
         }
+        String name = sp.getSavepointName();
+        log.fine(() -> String.format("release %s", name));
+        this.sqlConn.releaseSavepoint(sp);
         sendOK();
     }
 
@@ -149,8 +149,9 @@ public class TcpConnection implements Protocol, Runnable, AutoCloseable {
         Savepoint sp;
         if (name == null) sp = this.sqlConn.setSavepoint();
         else sp = this.sqlConn.setSavepoint(name);
-        this.spMap.put(sp.getSavepointId(), sp);
-        sendOK();
+        int id = sp.getSavepointId();
+        this.spMap.put(id, sp);
+        sendOK(id);
     }
 
     protected void processRollback() throws IOException, SQLException {
@@ -164,11 +165,12 @@ public class TcpConnection implements Protocol, Runnable, AutoCloseable {
             int id = ((Number)a[0]).intValue();
             Savepoint sp = this.spMap.remove(id);
             if (sp == null) {
-                String s = "Savepoint '" + a[1] + "' has rollback, released or not set";
+                String s = "Savepoint has rollback, released or not set";
                 throw new SQLException(s);
-            } else {
-                this.sqlConn.rollback(sp);
             }
+            String name = sp.getSavepointName();
+            log.fine(() -> String.format("rollback to %s", name));
+            this.sqlConn.rollback(sp);
         }
         sendOK();
     }
@@ -316,7 +318,6 @@ public class TcpConnection implements Protocol, Runnable, AutoCloseable {
     @Override
     public void close() {
         this.stmtMap.clear();
-        this.spMap.clear();
         IOUtils.close(this.sqlConn);
         IOUtils.close(this.socket);
         this.open = false;

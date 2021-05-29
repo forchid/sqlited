@@ -16,6 +16,7 @@
 
 package org.sqlited.server.rmi.impl;
 
+import org.sqlited.jdbc.JdbcSavepoint;
 import org.sqlited.rmi.RMIConnection;
 import org.sqlited.rmi.RMIStatement;
 import org.sqlited.server.Config;
@@ -28,6 +29,7 @@ import java.rmi.server.RMIServerSocketFactory;
 import java.rmi.server.UnicastRemoteObject;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.Savepoint;
 import java.sql.Statement;
 import java.util.Properties;
 
@@ -80,6 +82,24 @@ public class RMIConnectionImpl extends UnicastRemoteObject implements RMIConnect
     @Override
     public void rollback() throws RemoteException, SQLException {
         this.sqlConn.rollback();
+    }
+
+    @Override
+    public Savepoint setSavepoint(String name) throws RemoteException, SQLException {
+        Savepoint sp;
+        if (name == null) sp = this.sqlConn.setSavepoint();
+        else sp = this.sqlConn.setSavepoint(name);
+        return new JdbcSavepoint(sp);
+    }
+
+    @Override
+    public void rollback(Savepoint savepoint) throws RemoteException, SQLException {
+        this.sqlConn.rollback(savepoint);
+    }
+
+    @Override
+    public void releaseSavepoint(Savepoint savepoint) throws RemoteException, SQLException {
+        this.sqlConn.releaseSavepoint(savepoint);
     }
 
     @Override

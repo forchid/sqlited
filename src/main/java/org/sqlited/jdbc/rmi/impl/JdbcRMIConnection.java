@@ -16,13 +16,19 @@
 
 package org.sqlited.jdbc.rmi.impl;
 
+import org.sqlited.jdbc.JdbcSavepoint;
 import org.sqlited.jdbc.adapter.ConnectionAdapter;
 import static org.sqlited.jdbc.rmi.util.RMIUtils.*;
+
+import org.sqlited.jdbc.rmi.util.VoidMethod;
 import org.sqlited.rmi.RMIConnection;
 import org.sqlited.rmi.RMIStatement;
 import org.sqlited.util.IOUtils;
 
+import java.io.Serializable;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
+import java.sql.Savepoint;
 import java.sql.Statement;
 import java.util.Properties;
 
@@ -53,6 +59,30 @@ public class JdbcRMIConnection extends ConnectionAdapter {
     }
 
     @Override
+    public Savepoint setSavepoint(String name) throws SQLException {
+        return invoke(() -> this.rmiConn.setSavepoint(name), this.props);
+    }
+
+    @Override
+    public void rollback(Savepoint savepoint) throws SQLException {
+        Savepoint sp = wrapSavepoint(savepoint);
+        invoke(() -> this.rmiConn.rollback(sp), this.props);
+    }
+
+    @Override
+    public void releaseSavepoint(Savepoint savepoint) throws SQLException {
+        Savepoint sp = wrapSavepoint(savepoint);
+        invoke(() -> this.rmiConn.releaseSavepoint(sp), this.props);
+    }
+
+    protected Savepoint wrapSavepoint(Savepoint savepoint) throws SQLException {
+        Savepoint sp;
+        if (savepoint instanceof Serializable) sp = savepoint;
+        else sp = new JdbcSavepoint(savepoint);
+        return sp;
+    }
+
+    @Override
     public boolean getAutoCommit() throws SQLException {
         return invoke(this.rmiConn::getAutoCommit, this.props);
     }
@@ -69,7 +99,7 @@ public class JdbcRMIConnection extends ConnectionAdapter {
 
     @Override
     public void rollback() throws SQLException {
-        invoke(this.rmiConn::rollback, this.props);
+        invoke((VoidMethod) this.rmiConn::rollback, this.props);
     }
 
     @Override
