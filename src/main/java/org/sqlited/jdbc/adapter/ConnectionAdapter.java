@@ -81,7 +81,7 @@ public abstract class ConnectionAdapter implements Connection {
     }
 
     @Override
-    public void setReadOnly(boolean b) throws SQLException {
+    public void setReadOnly(boolean readonly) throws SQLException {
         throw new SQLFeatureNotSupportedException();
     }
 
@@ -92,16 +92,16 @@ public abstract class ConnectionAdapter implements Connection {
 
     @Override
     public void setCatalog(String s) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        // Ignore
     }
 
     @Override
     public String getCatalog() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return null;
     }
 
     @Override
-    public void setTransactionIsolation(int i) throws SQLException {
+    public void setTransactionIsolation(int level) throws SQLException {
         throw new SQLFeatureNotSupportedException();
     }
 

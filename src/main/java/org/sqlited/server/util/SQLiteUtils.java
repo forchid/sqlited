@@ -21,7 +21,10 @@ import org.sqlite.SQLiteConnection;
 import org.sqlited.util.logging.LoggerFactory;
 
 import java.io.File;
+import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Properties;
 import java.util.logging.Logger;
 
@@ -52,6 +55,27 @@ public final class SQLiteUtils {
         }
 
         return url;
+    }
+
+    public static boolean queryOnly(Connection conn, Statement stmt)
+            throws SQLException {
+
+        if (conn.isReadOnly()) {
+            return true;
+        } else {
+            String s = "pragma query_only";
+            try (ResultSet rs = stmt.executeQuery(s)) {
+                rs.next();
+                return rs.getBoolean(1);
+            }
+        }
+    }
+
+    public static void setQueryOnly(Connection conn, Statement stmt,
+                                    boolean readonly)
+            throws SQLException {
+        String setSql = "pragma query_only = " + readonly;
+        stmt.executeUpdate(setSql);
     }
 
 }

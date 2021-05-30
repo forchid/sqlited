@@ -29,6 +29,8 @@ public class TransactionTest extends BaseTest {
         try (Connection c = getTestConn();
              Statement s = c.createStatement()) {
             s.executeUpdate("drop table if exists account");
+            s.executeUpdate("drop table if exists test_readonly_a");
+            s.executeUpdate("drop table if exists test_readonly_b");
             s.executeUpdate(TBL_ACCOUNT_DDL);
         }
     }
@@ -51,6 +53,87 @@ public class TransactionTest extends BaseTest {
     @Test
     public void testMultiConnsSavepointRMI() throws Exception {
         doTestMultiConns(getRMIUrl(), true);
+    }
+
+    @Test
+    public void testReadOnly() throws Exception {
+        String url = getTestUrl();
+        doTestReadOnly(url);
+    }
+
+    @Test
+    public void testReadOnlyRMI() throws Exception {
+        String url = getRMIUrl();
+        doTestReadOnly(url);
+    }
+
+    void doTestReadOnly(String url) throws Exception {
+        doTestReadOnly(url, 10, false);
+        doTestReadOnly(url, 10, true);
+    }
+
+    void doTestReadOnly(String url, int n, boolean testTx) throws Exception {
+        String selectSql = "select count(*) from account";
+        String createSql = "create table test_readonly_a(id integer primary key)";
+        String dropSql   = "drop table test_readonly_b";
+        String insertSql = "insert into account(id, name, balance)values(1, 'Jim', 1000)";
+        String updateSql = "update account set balance = balance + 1000 where id = 1";
+        String deleteSql = "delete from account where id = 1";
+        String[] sqlList = {selectSql, createSql, dropSql, insertSql, updateSql, deleteSql};
+
+        try (Connection conn = getConn(url);
+             Statement stmt = conn.createStatement()) {
+            for (int i = 0; i < n; ++i) {
+                conn.setAutoCommit(true);
+                boolean ro = conn.isReadOnly();
+                conn.setReadOnly(ro);
+                assertEquals(ro, conn.isReadOnly());
+                stmt.executeUpdate("drop table if exists test_readonly_a");
+                stmt.executeUpdate("create table test_readonly_b(id integer primary key)");
+
+                // test readonly
+                conn.setReadOnly(true);
+                assertTrue(conn.isReadOnly());
+                if (testTx) conn.setAutoCommit(false);
+                for (int j = 0; j < sqlList.length; ++j) {
+                    String sql = sqlList[j];
+                    if (j == 0) {
+                        try (ResultSet rs = stmt.executeQuery(sql)) {
+                            assertTrue(rs.next());
+                            assertEquals(0, rs.getInt(1));
+                        }
+                    } else {
+                        try {
+                            stmt.executeUpdate(sql);
+                            fail();
+                        } catch (SQLException e) {
+                            if (8/*vendorCode: readonly*/ != e.getErrorCode()) {
+                                throw e;
+                            }
+                            // OK
+                        }
+                    }
+                }
+                if (testTx) conn.rollback();
+
+                // test read/write
+                conn.setReadOnly(false);
+                assertFalse(conn.isReadOnly());
+                if (testTx) conn.setAutoCommit(false);
+                for (int j = 0; j < sqlList.length; ++j) {
+                    String sql = sqlList[j];
+                    if (j == 0) {
+                        try (ResultSet rs = stmt.executeQuery(sql)) {
+                            assertTrue(rs.next());
+                            assertEquals(0, rs.getInt(1));
+                        }
+                    } else {
+                        stmt.executeUpdate(sql);
+                    }
+                }
+                if (testTx) conn.commit();
+            }
+        }
     }
 
     void doTestMultiConns(String url) throws Exception {

@@ -26,4 +26,8 @@ public interface RMIConnection extends Remote, AutoCloseable {
 
     void releaseSavepoint(Savepoint savepoint) throws RemoteException, SQLException;
 
+    boolean isReadonly() throws RemoteException, SQLException;
+
+    void setReadOnly(boolean readonly) throws RemoteException, SQLException;
+
 }

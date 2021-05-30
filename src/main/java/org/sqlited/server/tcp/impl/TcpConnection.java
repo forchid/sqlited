@@ -19,7 +19,7 @@ package org.sqlited.server.tcp.impl;
 import org.sqlited.io.Protocol;
 import org.sqlited.io.Transfer;
 import org.sqlited.server.Config;
-import org.sqlited.server.util.SQLiteUtils;
+import static org.sqlited.server.util.SQLiteUtils.*;
 import org.sqlited.util.IOUtils;
 import org.sqlited.util.logging.LoggerFactory;
 
@@ -47,10 +47,12 @@ public class TcpConnection implements Protocol, Runnable, AutoCloseable {
     protected Transfer ch;
     protected Connection sqlConn;
     private volatile boolean open = true;
+    private boolean readonly;
 
     // Stmt management
     private int nextStmtId;
     private final Map<Integer, TcpStatement> stmtMap = new HashMap<>();
+    private Statement auxStmt;
 
     // Tx management
     private final Map<Integer, Savepoint> spMap = new HashMap<>();
@@ -99,6 +101,9 @@ public class TcpConnection implements Protocol, Runnable, AutoCloseable {
                     case CMD_CLOSE_STMT:
                         processCloseStmt();
                         break;
+                    case CMD_SET_RO:
+                        processSetReadOnly();
+                        break;
                     case CMD_SET_AC:
                         processSetAutoCommit();
                         break;
@@ -123,6 +128,26 @@ public class TcpConnection implements Protocol, Runnable, AutoCloseable {
             } catch (SQLException e) {
                 ch.writeError(e);
                 log.log(Level.FINE, "SQL error", e);
+            }
+        }
+    }
+
+    protected void processSetReadOnly() throws IOException, SQLException {
+        // In: readonly flag
+        boolean readonly = this.ch.readBoolean();
+        boolean old = this.readonly;
+
+        if (old == readonly) {
+            sendOK();
+        } else {
+            Connection conn = this.sqlConn;
+            Statement stmt = getAuxStmt();
+            setQueryOnly(conn, stmt, readonly);
+            if (readonly == queryOnly(conn, stmt)) {
+                this.readonly = readonly;
+                sendOK();
+            } else {
+                this.ch.writeError("Set readonly failure");
             }
         }
     }
@@ -280,8 +305,10 @@ public class TcpConnection implements Protocol, Runnable, AutoCloseable {
         boolean failed = true;
         try {
             String dataDir = this.config.getDataDir();
-            url = SQLiteUtils.wrapURL(dataDir, url);
-            this.sqlConn = SQLiteUtils.open(url, info);
+            url = wrapURL(dataDir, url);
+            this.sqlConn = open(url, info);
+            Statement stmt = getAuxStmt();
+            this.readonly = queryOnly(this.sqlConn, stmt);
             sendOK();
             failed = false;
             return true;
@@ -304,11 +331,20 @@ public class TcpConnection implements Protocol, Runnable, AutoCloseable {
     public void sendOK(long lastInsertId, long affectedRows)
             throws SQLException, IOException {
         Connection conn = this.sqlConn;
-        boolean ro = conn.isReadOnly();
+        boolean ro = this.readonly;
         boolean ac = conn.getAutoCommit();
         int status = (ro ? 0x1: 0x0) | (ac? 0x10: 0x00);
         if (ac) this.spMap.clear();
-        ch.writeOK(status, lastInsertId, affectedRows);
+        this.ch.writeOK(status, lastInsertId, affectedRows);
+    }
+
+    protected Statement getAuxStmt() throws SQLException {
+        Statement stmt = this.auxStmt;
+        if (stmt == null || stmt.isClosed()) {
+            return (this.auxStmt = this.sqlConn.createStatement());
+        } else {
+            return stmt;
+        }
     }
 
     public boolean isOpen() {
@@ -318,6 +354,8 @@ public class TcpConnection implements Protocol, Runnable, AutoCloseable {
     @Override
     public void close() {
         this.stmtMap.clear();
+        this.spMap.clear();
+        IOUtils.close(this.auxStmt);
         IOUtils.close(this.sqlConn);
         IOUtils.close(this.socket);
         this.open = false;

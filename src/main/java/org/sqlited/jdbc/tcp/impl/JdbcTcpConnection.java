@@ -206,6 +206,25 @@ public class JdbcTcpConnection extends ConnectionAdapter {
     }
 
     @Override
+    public void setReadOnly(boolean readonly) throws SQLException {
+        Transfer ch = this.ch;
+        try {
+            ch.writeByte(Transfer.CMD_SET_RO)
+                    .writeBoolean(readonly)
+                    .flush();
+            readOK();
+        } catch (IOException e) {
+            String s = "Set readOnly error";
+            throw handle(s, e);
+        }
+    }
+
+    @Override
+    public void setTransactionIsolation(int level) throws SQLException {
+
+    }
+
+    @Override
     public void close() throws SQLException {
         IOUtils.close(this.socket);
         super.close();

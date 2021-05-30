@@ -20,7 +20,7 @@ import org.sqlited.jdbc.JdbcSavepoint;
 import org.sqlited.rmi.RMIConnection;
 import org.sqlited.rmi.RMIStatement;
 import org.sqlited.server.Config;
-import org.sqlited.server.util.SQLiteUtils;
+import static org.sqlited.server.util.SQLiteUtils.*;
 import org.sqlited.util.IOUtils;
 
 import java.rmi.RemoteException;
@@ -39,16 +39,30 @@ public class RMIConnectionImpl extends UnicastRemoteObject implements RMIConnect
     protected final RMIServerSocketFactory serverSocketFactory;
     protected final Config config;
     protected final Connection sqlConn;
+    private boolean readonly;
+    private Statement auxStmt;
 
     protected RMIConnectionImpl(String url, Properties info, Config config,
                                 RMIClientSocketFactory clientSocketFactory,
                                 RMIServerSocketFactory serverSocketFactory)
             throws RemoteException, SQLException {
         super(config.getPort(), clientSocketFactory, serverSocketFactory);
-        this.sqlConn = SQLiteUtils.open(url, info);
+        this.sqlConn = open(url, info);
         this.config  = config;
         this.clientSocketFactory = clientSocketFactory;
         this.serverSocketFactory = serverSocketFactory;
+        init();
+    }
+
+    protected void init() throws SQLException {
+        boolean failed = true;
+        try {
+            Statement stmt = getAuxStmt();
+            this.readonly = queryOnly(this.sqlConn, stmt);
+            failed = false;
+        } finally {
+            if (failed) IOUtils.close(this.sqlConn);
+        }
     }
 
     @Override
@@ -67,7 +81,6 @@ public class RMIConnectionImpl extends UnicastRemoteObject implements RMIConnect
     public boolean getAutoCommit() throws RemoteException, SQLException {
         return this.sqlConn.getAutoCommit();
     }
-
 
     @Override
     public void setAutoCommit(boolean autoCommit) throws RemoteException, SQLException {
@@ -103,8 +116,36 @@ public class RMIConnectionImpl extends UnicastRemoteObject implements RMIConnect
     }
 
     @Override
+    public boolean isReadonly() throws RemoteException, SQLException {
+        return this.readonly;
+    }
+
+    @Override
+    public void setReadOnly(boolean readonly) throws RemoteException, SQLException {
+        if (this.readonly != readonly) {
+            Connection conn = this.sqlConn;
+            Statement stmt = getAuxStmt();
+            setQueryOnly(conn, stmt, readonly);
+            if (readonly == queryOnly(conn, stmt)) {
+                this.readonly = readonly;
+            } else {
+                throw new SQLException("Set readonly failure");
+            }
+        }
+    }
+
+    @Override
     public void close() throws RemoteException {
         IOUtils.close(this.sqlConn);
+    }
+
+    protected Statement getAuxStmt() throws SQLException {
+        Statement stmt = this.auxStmt;
+        if (stmt == null) {
+            return (this.auxStmt = this.sqlConn.createStatement());
+        } else {
+            return stmt;
+        }
     }
 
 }

@@ -153,7 +153,7 @@ public class AuthSocket extends Socket {
         RANDOM.nextBytes(challenge);
 
         // Send handshake packet
-        final int serverVersion = 0x01; // protocol version
+        final int serverVersion = Transfer.VERSION; // protocol version
         ch.writeByte(serverVersion)
                 .writeByte(mCode)
                 .write(challenge)
@@ -213,7 +213,7 @@ public class AuthSocket extends Socket {
         Transfer ch = new Transfer(socket);
 
         // Handshake
-        final int clientVersion = 0x01;
+        final int clientVersion = Transfer.VERSION;
         int serverVersion = ch.readByte(true);
         if (serverVersion != clientVersion) {
             String s = "Unknown server protocol " + serverVersion;

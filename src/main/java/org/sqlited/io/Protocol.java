@@ -2,6 +2,8 @@ package org.sqlited.io;
 
 public interface Protocol {
 
+    byte VERSION = 0x01;
+
     // Command list
     // - stmt command
     byte CMD_CREATE_STMT  = 0x01;
@@ -9,11 +11,13 @@ public interface Protocol {
     byte CMD_FETCH_ROWS   = 0x03;
     byte CMD_CLOSE_STMT   = 0x04;
     // - tx command
-    byte CMD_SET_AC       = 0x05; // set autocommit
-    byte CMD_SET_SP       = 0x06; // set savepoint
-    byte CMD_REL_SP       = 0x07; // release savepoint
-    byte CMD_COMMIT       = 0x08;
-    byte CMD_ROLLBACK     = 0x09; // rollback [savepoint]
+    byte CMD_SET_TI       = 0x51; // set tx isolation
+    byte CMD_SET_RO       = 0x52; // set readonly
+    byte CMD_SET_AC       = 0x53; // set autocommit
+    byte CMD_SET_SP       = 0x54; // set savepoint
+    byte CMD_REL_SP       = 0x55; // release savepoint
+    byte CMD_COMMIT       = 0x56;
+    byte CMD_ROLLBACK     = 0x57; // rollback [savepoint]
 
     // Results
     byte RESULT_OK  = 0;

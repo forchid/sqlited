@@ -27,7 +27,6 @@ import org.sqlited.util.IOUtils;
 
 import java.io.Serializable;
 import java.sql.SQLException;
-import java.sql.SQLFeatureNotSupportedException;
 import java.sql.Savepoint;
 import java.sql.Statement;
 import java.util.Properties;
@@ -36,10 +35,13 @@ public class JdbcRMIConnection extends ConnectionAdapter {
 
     protected final Properties props;
     protected final RMIConnection rmiConn;
+    private boolean readonly;
 
-    public JdbcRMIConnection(Properties props, RMIConnection rmiConn) {
+    public JdbcRMIConnection(Properties props, RMIConnection rmiConn)
+            throws SQLException {
         this.props = props;
         this.rmiConn = rmiConn;
+        this.readonly = invoke(this.rmiConn::isReadonly, this.props);
     }
 
     @Override
@@ -80,6 +82,17 @@ public class JdbcRMIConnection extends ConnectionAdapter {
         if (savepoint instanceof Serializable) sp = savepoint;
         else sp = new JdbcSavepoint(savepoint);
         return sp;
+    }
+
+    @Override
+    public boolean isReadOnly() throws SQLException {
+        return this.readonly;
+    }
+
+    @Override
+    public void setReadOnly(boolean readonly) throws SQLException {
+        invoke(() -> this.rmiConn.setReadOnly(readonly), this.props);
+        this.readonly = readonly;
     }
 
     @Override
