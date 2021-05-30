@@ -21,6 +21,8 @@ import org.sqlited.rmi.RMIConnection;
 import org.sqlited.rmi.RMIStatement;
 import org.sqlited.server.Config;
 import static org.sqlited.server.util.SQLiteUtils.*;
+
+import org.sqlited.server.util.SQLiteUtils;
 import org.sqlited.util.IOUtils;
 
 import java.rmi.RemoteException;
@@ -63,6 +65,11 @@ public class RMIConnectionImpl extends UnicastRemoteObject implements RMIConnect
         } finally {
             if (failed) IOUtils.close(this.sqlConn);
         }
+    }
+
+    @Override
+    public int getStatus() throws RemoteException, SQLException {
+        return SQLiteUtils.getStatus(this.sqlConn, this.readonly);
     }
 
     @Override
@@ -123,15 +130,19 @@ public class RMIConnectionImpl extends UnicastRemoteObject implements RMIConnect
     @Override
     public void setReadOnly(boolean readonly) throws RemoteException, SQLException {
         if (this.readonly != readonly) {
-            Connection conn = this.sqlConn;
             Statement stmt = getAuxStmt();
-            setQueryOnly(conn, stmt, readonly);
-            if (readonly == queryOnly(conn, stmt)) {
+            setQueryOnly(stmt, readonly);
+            if (readonly == queryOnly(this.sqlConn, stmt)) {
                 this.readonly = readonly;
             } else {
                 throw new SQLException("Set readonly failure");
             }
         }
+    }
+
+    @Override
+    public void setTransactionIsolation(int level) throws RemoteException, SQLException {
+        this.sqlConn.setTransactionIsolation(level);
     }
 
     @Override

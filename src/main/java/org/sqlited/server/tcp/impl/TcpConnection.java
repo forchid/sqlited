@@ -137,7 +137,7 @@ public class TcpConnection implements Protocol, Runnable, AutoCloseable {
 
     protected void processSetTxIsolation() throws IOException, SQLException {
         // In: level
-        int level = this.ch.readByte(true) & 0x0f;
+        int level = this.ch.readByte(true) & 0xFF;
         this.sqlConn.setTransactionIsolation(level);
         sendOK();
     }
@@ -152,7 +152,7 @@ public class TcpConnection implements Protocol, Runnable, AutoCloseable {
         } else {
             Connection conn = this.sqlConn;
             Statement stmt = getAuxStmt();
-            setQueryOnly(conn, stmt, readonly);
+            setQueryOnly(stmt, readonly);
             if (readonly == queryOnly(conn, stmt)) {
                 this.readonly = readonly;
                 sendOK();
@@ -345,12 +345,8 @@ public class TcpConnection implements Protocol, Runnable, AutoCloseable {
 
     public void sendOK(int status, long lastInsertId, long affectedRows)
             throws SQLException, IOException {
-        Connection conn = this.sqlConn;
-        boolean ro = this.readonly;
-        boolean ac = conn.getAutoCommit();
-        int level = conn.getTransactionIsolation() & 0x0F;
-        if (ac) this.spMap.clear();
-        status |= (level << 2) | (ro ? 0x1: 0x0) | (ac? 0x2: 0x0);
+        status = getStatus(this.sqlConn, this.readonly, status);
+        if ((status & 0x2) != 0x0) this.spMap.clear();
         this.ch.writeOK(status, lastInsertId, affectedRows);
     }
 

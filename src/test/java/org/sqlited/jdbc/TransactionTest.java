@@ -73,11 +73,11 @@ public class TransactionTest extends BaseTest {
         doTestIsolation(url);
     }
 
-//    @Test
-//    public void testIsolationRMI() throws Exception {
-//        String url = getRMIUrl();
-//        doTestIsolation(url);
-//    }
+    @Test
+    public void testIsolationRMI() throws Exception {
+        String url = getRMIUrl();
+        doTestIsolation(url);
+    }
 
     void doTestIsolation(String url) throws Exception {
         int conns = 10, times = 10;

@@ -71,11 +71,23 @@ public final class SQLiteUtils {
         }
     }
 
-    public static void setQueryOnly(Connection conn, Statement stmt,
-                                    boolean readonly)
+    public static void setQueryOnly(Statement stmt, boolean readonly)
             throws SQLException {
         String setSql = "pragma query_only = " + readonly;
         stmt.executeUpdate(setSql);
+    }
+
+    public static int getStatus(Connection conn, boolean readonly)
+            throws SQLException {
+        return getStatus(conn, readonly, 0);
+    }
+
+    public static int getStatus(Connection conn, boolean readonly, int status)
+            throws SQLException {
+        boolean ac = conn.getAutoCommit();
+        int level = conn.getTransactionIsolation() & 0x0F;
+        status |= (level << 2) | (readonly ? 0x1: 0x0) | (ac? 0x2: 0x0);
+        return status;
     }
 
 }

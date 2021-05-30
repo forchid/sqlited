@@ -35,13 +35,13 @@ public class JdbcRMIConnection extends ConnectionAdapter {
 
     protected final Properties props;
     protected final RMIConnection rmiConn;
-    private boolean readonly;
+    protected int status;
 
     public JdbcRMIConnection(Properties props, RMIConnection rmiConn)
             throws SQLException {
         this.props = props;
         this.rmiConn = rmiConn;
-        this.readonly = invoke(this.rmiConn::isReadonly, this.props);
+        this.status = invoke(this.rmiConn::getStatus, this.props);
     }
 
     @Override
@@ -85,14 +85,26 @@ public class JdbcRMIConnection extends ConnectionAdapter {
     }
 
     @Override
+    public int getTransactionIsolation() throws SQLException {
+        return (this.status & 0x3C) >>> 2;
+    }
+
+    @Override
+    public void setTransactionIsolation(int level) throws SQLException {
+        checkIsolation(level);
+        invoke(() -> this.rmiConn.setTransactionIsolation(level), this.props);
+        this.status = (this.status & ~0x3C) | (level << 2);
+    }
+
+    @Override
     public boolean isReadOnly() throws SQLException {
-        return this.readonly;
+        return (this.status & 0x1) != 0x0;
     }
 
     @Override
     public void setReadOnly(boolean readonly) throws SQLException {
         invoke(() -> this.rmiConn.setReadOnly(readonly), this.props);
-        this.readonly = readonly;
+        this.status = (this.status & ~0x1) | (readonly? 0x1: 0x0);
     }
 
     @Override

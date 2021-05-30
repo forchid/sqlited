@@ -7,6 +7,8 @@ import java.sql.Savepoint;
 
 public interface RMIConnection extends Remote, AutoCloseable {
 
+    int getStatus() throws RemoteException, SQLException;
+
     RMIStatement createStatement() throws RemoteException, SQLException;
 
     @Override
@@ -29,5 +31,7 @@ public interface RMIConnection extends Remote, AutoCloseable {
     boolean isReadonly() throws RemoteException, SQLException;
 
     void setReadOnly(boolean readonly) throws RemoteException, SQLException;
+
+    void setTransactionIsolation(int level) throws RemoteException, SQLException;
 
 }
