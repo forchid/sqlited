@@ -275,13 +275,13 @@ public abstract class ConnectionAdapter implements Connection {
     }
 
     @Override
-    public void setSchema(String s) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+    public void setSchema(String schema) throws SQLException {
+        // Ignore
     }
 
     @Override
     public String getSchema() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return null;
     }
 
     @Override
