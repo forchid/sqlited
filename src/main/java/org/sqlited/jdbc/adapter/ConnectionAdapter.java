@@ -159,13 +159,20 @@ public abstract class ConnectionAdapter implements Connection {
     }
 
     @Override
-    public void setHoldability(int i) throws SQLException {
+    public void setHoldability(int holdability) throws SQLException {
         throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public int getHoldability() throws SQLException {
         throw new SQLFeatureNotSupportedException();
+    }
+
+    protected void checkHoldability(int holdability) throws SQLException {
+        if (holdability != ResultSet.HOLD_CURSORS_OVER_COMMIT
+                && holdability != ResultSet.CLOSE_CURSORS_AT_COMMIT) {
+            throw new SQLException("Unknown holdability");
+        }
     }
 
     @Override

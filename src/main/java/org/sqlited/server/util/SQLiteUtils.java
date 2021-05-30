@@ -86,7 +86,8 @@ public final class SQLiteUtils {
             throws SQLException {
         boolean ac = conn.getAutoCommit();
         int level = conn.getTransactionIsolation() & 0x0F;
-        status |= (level << 2) | (readonly ? 0x1: 0x0) | (ac? 0x2: 0x0);
+        int hold = conn.getHoldability() & 0x03;
+        status |= (hold << 6) | (level << 2) | (ac? 0x2: 0x0) | (readonly ? 0x1: 0x0);
         return status;
     }
 

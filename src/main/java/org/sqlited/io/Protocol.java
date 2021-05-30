@@ -18,6 +18,7 @@ public interface Protocol {
     byte CMD_REL_SP       = 0x55; // release savepoint
     byte CMD_COMMIT       = 0x56;
     byte CMD_ROLLBACK     = 0x57; // rollback [savepoint]
+    byte CMD_SET_HD       = 0x58; // set holdability
 
     // Results
     byte RESULT_OK  = 0;

@@ -146,6 +146,11 @@ public class RMIConnectionImpl extends UnicastRemoteObject implements RMIConnect
     }
 
     @Override
+    public void setHoldability(int holdability) throws RemoteException, SQLException {
+        this.sqlConn.setHoldability(holdability);
+    }
+
+    @Override
     public void close() throws RemoteException {
         IOUtils.close(this.sqlConn);
     }

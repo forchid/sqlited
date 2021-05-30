@@ -122,6 +122,9 @@ public class TcpConnection implements Protocol, Runnable, AutoCloseable {
                     case CMD_ROLLBACK:
                         processRollback();
                         break;
+                    case CMD_SET_HD:
+                        processSetHoldability();
+                        break;
                     default:
                         String s = "Unknown command: 0x" + toHexString(cmd);
                         ch.writeError(s, "08000");
@@ -133,6 +136,13 @@ public class TcpConnection implements Protocol, Runnable, AutoCloseable {
                 log.log(Level.FINE, "SQL error", e);
             }
         }
+    }
+
+    protected void processSetHoldability() throws IOException, SQLException {
+        // In: holdability
+        int holdability = this.ch.readByte(true) & 0xFF;
+        this.sqlConn.setHoldability(holdability);
+        sendOK();
     }
 
     protected void processSetTxIsolation() throws IOException, SQLException {

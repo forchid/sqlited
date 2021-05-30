@@ -239,6 +239,33 @@ public class JdbcTcpConnection extends ConnectionAdapter {
     }
 
     @Override
+    public void setHoldability(int holdability) throws SQLException {
+        checkHoldability(holdability);
+        try {
+            this.ch.writeByte(Transfer.CMD_SET_HD)
+                    .writeByte(holdability)
+                    .flush();
+            readOK();
+        } catch (IOException e) {
+            String s = "Set holdability error";
+            throw handle(s, e);
+        }
+    }
+
+    @Override
+    public int getHoldability() throws SQLException {
+        int status = this.status;
+
+        if ((status & 0x40) != 0x0) {
+            return ResultSet.HOLD_CURSORS_OVER_COMMIT;
+        } else if ((status & 0x80) != 0x0) {
+            return ResultSet.CLOSE_CURSORS_AT_COMMIT;
+        } else {
+            throw new SQLException("Unknown holdability");
+        }
+    }
+
+    @Override
     public void close() throws SQLException {
         IOUtils.close(this.socket);
         super.close();

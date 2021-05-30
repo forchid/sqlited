@@ -79,6 +79,49 @@ public class TransactionTest extends BaseTest {
         doTestIsolation(url);
     }
 
+    @Test
+    public void testHoldability() throws Exception {
+        String url = getTestUrl();
+        doTestHoldability(url);
+    }
+
+    @Test
+    public void testHoldabilityRMI() throws Exception {
+        String url = getRMIUrl();
+        doTestHoldability(url);
+    }
+
+    void doTestHoldability(String url) throws Exception {
+        int conns = 10, times = 10;
+
+        for (int c = 0; c < conns; c++) {
+            try (Connection conn = getConn(url)) {
+                for (int t = 0; t < times; ++t) {
+                    int hold = conn.getHoldability();
+                    conn.setHoldability(hold);
+                    assertEquals(hold, conn.getHoldability());
+
+                    int[] holds = {ResultSet.HOLD_CURSORS_OVER_COMMIT,
+                            ResultSet.CLOSE_CURSORS_AT_COMMIT};
+                    for (int i = 0; i < holds.length; ++i) {
+                        hold = holds[i];
+                        try {
+                            conn.setHoldability(hold);
+                            assertEquals(hold, conn.getHoldability());
+                            if (i != 1) {
+                                fail();
+                            }
+                        } catch (SQLException e) {
+                            if (i == 1) {
+                                throw e;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     void doTestIsolation(String url) throws Exception {
         int conns = 10, times = 10;
 

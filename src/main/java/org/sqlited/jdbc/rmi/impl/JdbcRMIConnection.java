@@ -26,9 +26,7 @@ import org.sqlited.rmi.RMIStatement;
 import org.sqlited.util.IOUtils;
 
 import java.io.Serializable;
-import java.sql.SQLException;
-import java.sql.Savepoint;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.Properties;
 
 public class JdbcRMIConnection extends ConnectionAdapter {
@@ -125,6 +123,26 @@ public class JdbcRMIConnection extends ConnectionAdapter {
     @Override
     public void rollback() throws SQLException {
         invoke((VoidMethod) this.rmiConn::rollback, this.props);
+    }
+
+    @Override
+    public void setHoldability(int holdability) throws SQLException {
+        checkHoldability(holdability);
+        invoke(() -> this.rmiConn.setHoldability(holdability), this.props);
+        this.status = (this.status & ~0xC0) | (holdability << 6);
+    }
+
+    @Override
+    public int getHoldability() throws SQLException {
+        int status = this.status;
+
+        if ((status & 0x40) != 0x0) {
+            return ResultSet.HOLD_CURSORS_OVER_COMMIT;
+        } else if ((status & 0x80) != 0x0) {
+            return ResultSet.CLOSE_CURSORS_AT_COMMIT;
+        } else {
+            throw new SQLException("Unknown holdability");
+        }
     }
 
     @Override

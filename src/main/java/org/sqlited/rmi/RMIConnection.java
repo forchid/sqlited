@@ -34,4 +34,6 @@ public interface RMIConnection extends Remote, AutoCloseable {
 
     void setTransactionIsolation(int level) throws RemoteException, SQLException;
 
+    void setHoldability(int holdability) throws RemoteException, SQLException;
+
 }
