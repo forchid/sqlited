@@ -104,6 +104,9 @@ public class TcpConnection implements Protocol, Runnable, AutoCloseable {
                     case CMD_SET_RO:
                         processSetReadOnly();
                         break;
+                    case CMD_SET_TI:
+                        processSetTxIsolation();
+                        break;
                     case CMD_SET_AC:
                         processSetAutoCommit();
                         break;
@@ -130,6 +133,13 @@ public class TcpConnection implements Protocol, Runnable, AutoCloseable {
                 log.log(Level.FINE, "SQL error", e);
             }
         }
+    }
+
+    protected void processSetTxIsolation() throws IOException, SQLException {
+        // In: level
+        int level = this.ch.readByte(true) & 0x0f;
+        this.sqlConn.setTransactionIsolation(level);
+        sendOK();
     }
 
     protected void processSetReadOnly() throws IOException, SQLException {
@@ -321,20 +331,26 @@ public class TcpConnection implements Protocol, Runnable, AutoCloseable {
     }
 
     public void sendOK() throws SQLException, IOException {
-        sendOK(0, 0);
+        sendOK(0, 0, 0);
     }
 
     public void sendOK(long lastId) throws SQLException, IOException {
-        sendOK(lastId, 0);
+        sendOK(0, lastId, 0);
     }
 
     public void sendOK(long lastInsertId, long affectedRows)
             throws SQLException, IOException {
+        sendOK(0, lastInsertId, affectedRows);
+    }
+
+    public void sendOK(int status, long lastInsertId, long affectedRows)
+            throws SQLException, IOException {
         Connection conn = this.sqlConn;
         boolean ro = this.readonly;
         boolean ac = conn.getAutoCommit();
-        int status = (ro ? 0x1: 0x0) | (ac? 0x10: 0x00);
+        int level = conn.getTransactionIsolation() & 0x0F;
         if (ac) this.spMap.clear();
+        status |= (level << 2) | (ro ? 0x1: 0x0) | (ac? 0x2: 0x0);
         this.ch.writeOK(status, lastInsertId, affectedRows);
     }
 

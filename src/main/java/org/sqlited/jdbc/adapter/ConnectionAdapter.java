@@ -110,6 +110,19 @@ public abstract class ConnectionAdapter implements Connection {
         throw new SQLFeatureNotSupportedException();
     }
 
+    protected void checkIsolation(int level) throws SQLException {
+        switch (level) {
+            case TRANSACTION_NONE:
+            case TRANSACTION_READ_UNCOMMITTED:
+            case TRANSACTION_READ_COMMITTED:
+            case TRANSACTION_REPEATABLE_READ:
+            case TRANSACTION_SERIALIZABLE:
+                break;
+            default:
+                throw new SQLException("Unknown isolation level: " + level);
+        }
+    }
+
     @Override
     public SQLWarning getWarnings() throws SQLException {
         throw new SQLFeatureNotSupportedException();

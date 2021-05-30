@@ -67,6 +67,52 @@ public class TransactionTest extends BaseTest {
         doTestReadOnly(url);
     }
 
+    @Test
+    public void testIsolation() throws Exception {
+        String url = getTestUrl();
+        doTestIsolation(url);
+    }
+
+//    @Test
+//    public void testIsolationRMI() throws Exception {
+//        String url = getRMIUrl();
+//        doTestIsolation(url);
+//    }
+
+    void doTestIsolation(String url) throws Exception {
+        int conns = 10, times = 10;
+
+        for (int c = 0; c < conns; c++) {
+            try (Connection conn = getConn(url)) {
+                for (int t = 0; t < times; ++t) {
+                    int level = conn.getTransactionIsolation();
+                    conn.setTransactionIsolation(level);
+                    assertEquals(level, conn.getTransactionIsolation());
+
+                    int[] levels = {Connection.TRANSACTION_NONE,
+                            Connection.TRANSACTION_READ_UNCOMMITTED,
+                            Connection.TRANSACTION_READ_COMMITTED,
+                            Connection.TRANSACTION_REPEATABLE_READ,
+                            Connection.TRANSACTION_SERIALIZABLE};
+                    for (int i = 0; i < levels.length; ++i) {
+                        level = levels[i];
+                        try {
+                            conn.setTransactionIsolation(level);
+                            assertEquals(level, conn.getTransactionIsolation());
+                            if (i != 1 && i != 4) {
+                                fail();
+                            }
+                        } catch (SQLException e) {
+                            if (i == 1 || i == 4) {
+                                throw e;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     void doTestReadOnly(String url) throws Exception {
         doTestReadOnly(url, 10, false);
         doTestReadOnly(url, 10, true);

@@ -112,7 +112,7 @@ public class JdbcTcpConnection extends ConnectionAdapter {
 
     @Override
     public boolean getAutoCommit() throws SQLException {
-        return ((this.status & 0x02) != 0x0);
+        return ((this.status & 0x2) != 0x0);
     }
 
     @Override
@@ -220,8 +220,22 @@ public class JdbcTcpConnection extends ConnectionAdapter {
     }
 
     @Override
-    public void setTransactionIsolation(int level) throws SQLException {
+    public int getTransactionIsolation() throws SQLException {
+        return (this.status & 0x3C) >>> 2;
+    }
 
+    @Override
+    public void setTransactionIsolation(int level) throws SQLException {
+        checkIsolation(level);
+        try {
+            this.ch.writeByte(Transfer.CMD_SET_TI)
+                    .writeByte(level)
+                    .flush();
+            readOK();
+        } catch (IOException e) {
+            String s = "Set transaction isolation level error";
+            throw handle(s, e);
+        }
     }
 
     @Override
