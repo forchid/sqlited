@@ -53,9 +53,9 @@ public final class SocketUtils {
         }
         PropsUtils.setIfAbsent(props, "host", "localhost");
         PropsUtils.setIfAbsent(props, "method", "md5");
-        PropsUtils.setIfAbsent(props, "loginTimeout", "15000");
-        PropsUtils.setIfAbsent(props, "connectTimeout", "5000");
-        PropsUtils.setIfAbsent(props, "readTimeout", "60000");
+        PropsUtils.setIfAbsent(props, "loginTimeout", "5000");
+        PropsUtils.setIfAbsent(props, "connectTimeout", "10000");
+        PropsUtils.setIfAbsent(props, "readTimeout", "1800000");
         PropsUtils.setIfAbsent(props, "tcpNoDelay", "true");
         PropsUtils.setIfAbsent(props, "bufferSize", "4096");
 
