@@ -60,6 +60,7 @@ public abstract class JdbcResultSet extends ResultSetAdapter {
 
     @Override
     public boolean next() throws SQLException {
+        checkOpen();
         RowIterator i = this.rowItr;
         if (i != null && i.isLast() && !i.hasNext()) {
             close();

@@ -277,7 +277,8 @@ public class ConnectTest extends BaseTest {
                 assertTrue(rs.next());
                 assertEquals(1, rs.getInt("1"));
                 rs.close();
-                s.executeUpdate(TBL_ACCOUNT_DDL);
+                String sql = createAccountSQL(url);
+                s.executeUpdate(sql);
             }
             return null;
         };

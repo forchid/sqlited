@@ -26,12 +26,14 @@ public class TransactionTest extends BaseTest {
 
     @Before
     public void prepare() throws Exception {
-        try (Connection c = getTestConn();
+        String url = getTestUrl();
+        try (Connection c = getConn(url);
              Statement s = c.createStatement()) {
+            String sql = createAccountSQL(url);
             s.executeUpdate("drop table if exists account");
             s.executeUpdate("drop table if exists test_readonly_a");
             s.executeUpdate("drop table if exists test_readonly_b");
-            s.executeUpdate(TBL_ACCOUNT_DDL);
+            s.executeUpdate(sql);
         }
     }
 

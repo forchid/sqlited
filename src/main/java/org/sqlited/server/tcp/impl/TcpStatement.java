@@ -17,6 +17,7 @@
 package org.sqlited.server.tcp.impl;
 
 import org.sqlited.io.Transfer;
+import org.sqlited.result.RowIterator;
 import org.sqlited.util.IOUtils;
 
 import java.io.IOException;
@@ -39,19 +40,21 @@ public class TcpStatement implements AutoCloseable {
         this.stmt = stmt;
     }
 
-    public void setResultSet(ResultSet rs) {
-        if (this.rs != rs) IOUtils.close(this.rs);
-        this.rs = rs;
+    protected ResultSet initResultSet() throws SQLException {
+        IOUtils.close(this.rs);
+        return (this.rs = this.stmt.getResultSet());
     }
 
     public void sendResultSet(boolean meta) throws IOException, SQLException {
         // Format: ResultSet flag, status-1, resultSetMeta, rows, status-2
         TcpConnection conn = this.conn;
+        ResultSet rs = initResultSet();
         Transfer ch = conn.ch;
         int status = meta? 0x1: 0x0;
-        ch.writeByte(Transfer.RESULT_SET).writeInt(status);
+        ch.writeByte(Transfer.RESULT_SET)
+                .writeInt(status);
         boolean next = false;
-        if (meta) next = writeResultSetMeta();
+        if (meta) next = writeResultSetMeta(rs);
         else ch.writeArray(null);
         writeRows(next)
         .flush();
@@ -59,8 +62,8 @@ public class TcpStatement implements AutoCloseable {
 
     protected Transfer writeRows(boolean next) throws SQLException, IOException {
         // Format: [row, ..., ] null(row end), status
-        Transfer ch = this.conn.ch;
         ResultSet rs = this.rs;
+        Transfer ch = this.conn.ch;
         if (next || (next = rs.next())) {
             ResultSetMetaData metaData = rs.getMetaData();
             int m = metaData.getColumnCount();
@@ -81,51 +84,105 @@ public class TcpStatement implements AutoCloseable {
         return ch.writeByte(status);
     }
 
-    protected boolean writeResultSetMeta() throws SQLException, IOException {
-        // Format: [names, metas, typeNames, types, scales, ] null(meta end)
-        Transfer ch = this.conn.ch;
-        ResultSet rs = this.rs;
+    protected boolean writeResultSetMeta(ResultSet rs) throws SQLException, IOException {
         boolean next = rs.next();
+        org.sqlited.result.ResultSetMetaData rsMeta = null;
 
         if (next) {
-            ResultSetMetaData metaData = this.rs.getMetaData();
+            ResultSetMetaData metaData = rs.getMetaData();
             int n = metaData.getColumnCount();
 
             String[] names = new String[n];
             for (int i = 0; i < n; ++i) {
                 names[i] = metaData.getColumnName(i + 1);
             }
-            ch.writeArray(names);
 
             int[] metas = new int[n];
             for (int i = 0; i < n; ++i) {
-                int meta = metaData.isNullable(i + 1) == columnNullable? 0x01: 0x00;
+                int j = i + 1;
+                int meta = metaData.isNullable(j) == columnNullable? 0x01: 0x00;
                 //meta |= 0x00; // Reserved: primary key flag
-                meta |= metaData.isAutoIncrement(i + 1)? 0x04: 0x00;
+                meta |= metaData.isAutoIncrement(j)? 0x04: 0x00;
                 metas[i] = meta;
             }
-            ch.writeArray(metas);
 
             String[] typeNames = new String[n];
             for (int i = 0; i < n; ++i) {
                 typeNames[i] = metaData.getColumnTypeName(i + 1);
             }
-            ch.writeArray(typeNames);
             int[] types = new int[n];
             for (int i = 0; i < n; ++i) {
                 types[i] = metaData.getColumnType(i + 1);
             }
-            ch.writeArray(types);
 
             int[] scales = new int[n];
             for (int i = 0; i < n; ++i) {
                 scales[i] = metaData.getScale(i + 1);
             }
-            ch.writeArray(scales);
+            rsMeta = new org.sqlited.result.ResultSetMetaData(names,
+                    metas, typeNames, types, scales);
         }
-        ch.writeArray(null);
+        writeResultSetMeta(rsMeta);
 
         return next;
+    }
+
+    public void sendResultSet(RowIterator rowItr) throws IOException {
+        // Format: ResultSet flag, status-1, resultSetMeta, rows, status-2
+        org.sqlited.result.ResultSetMetaData meta = rowItr.getMetaData();
+        Transfer ch = this.conn.ch;
+        int status = 0x1;
+
+        ch.writeByte(Transfer.RESULT_SET)
+                .writeInt(status);
+        writeResultSetMeta(meta)
+                .writeRows(rowItr)
+                .flush();
+    }
+
+    public void sendResultSet(org.sqlited.result.ResultSetMetaData meta)
+            throws IOException, SQLException {
+        // Format: ResultSet flag, status-1, resultSetMeta, rows, status-2
+        Transfer ch = this.conn.ch;
+        int status = 0x1;
+
+        initResultSet();
+        ch.writeByte(Transfer.RESULT_SET)
+                .writeInt(status);
+        writeResultSetMeta(meta)
+                .writeRows(false)
+                .flush();
+    }
+
+    protected Transfer writeRows(RowIterator rowItr) throws IOException {
+        // Format: [row, ..., ] null(row end), status
+        Transfer ch = this.conn.ch;
+
+        while (rowItr.hasNext()) {
+            Object[] row = rowItr.get();
+            ch.writeArray(row);
+        }
+        // Row end
+        ch.writeArray(null);
+
+        int status = 0x00;
+        return ch.writeByte(status);
+    }
+
+    protected TcpStatement writeResultSetMeta(org.sqlited.result.ResultSetMetaData meta)
+            throws IOException {
+        // Format: names, metas, typeNames, types, scales, null(meta end)
+        Transfer ch = this.conn.ch;
+
+        if (meta != null) {
+            ch.writeArray(meta.getNames())
+                    .writeArray(meta.getColumnIntMetas())
+                    .writeArray(meta.getColumnTypeNames())
+                    .writeArray(meta.getColumnTypes())
+                    .writeArray(meta.getScales());
+        }
+        ch.writeArray(null);
+        return this;
     }
 
     public void fetchRows() throws IOException, SQLException {

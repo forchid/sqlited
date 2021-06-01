@@ -97,18 +97,6 @@ public class PerfTest extends BaseTest {
         });
     }
 
-    static void prepare(String url) throws Exception {
-        if (url == null) url = getTestUrl();
-        try (Connection c = DriverManager.getConnection(url);
-             Statement s = c.createStatement()) {
-            s.executeUpdate("drop table if exists account");
-            s.executeUpdate(TBL_ACCOUNT_DDL);
-            s.executeUpdate("delete from account");
-            s.executeUpdate("insert into account(id, name, balance, create_at) " +
-                    "values(1, 'Tom', 5000000, '2021-05-21 20:30:45.000')");
-        }
-    }
-
     void doTest() throws Exception {
         doTest(null);
     }

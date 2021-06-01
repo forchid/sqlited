@@ -55,7 +55,7 @@ public class JdbcTcpResultSet extends JdbcResultSet {
                     .writeInt(size)
                     .flush();
 
-            return stmt.readRows(metaData);
+            return JdbcTcpStatement.readRows(ch, metaData);
         } catch (IOException e) {
             String s = "Fetch rows error";
             throw conn.handle(s, e);

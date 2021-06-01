@@ -28,6 +28,7 @@ import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
@@ -40,13 +41,6 @@ public abstract class BaseTest {
     protected static final String workDir = System.getProperty("user.dir");
     protected static final String baseDir = workDir + File.separator + "temp";
     protected static final String password = "123456";
-
-    protected static final String TBL_ACCOUNT_DDL =
-            "create table if not exists account(" +
-                    "id int not null primary key, " +
-                    "name varchar(20) not null, " +
-                    "balance decimal(12,1) not null default 0," +
-                    "create_at datetime)";
 
     private static Server intruder;
     protected Server server;
@@ -61,6 +55,30 @@ public abstract class BaseTest {
     @AfterClass
     public static void teardown() {
         intruder.stop();
+    }
+
+    protected static String createAccountSQL(String url) {
+        boolean isSqlited = url.startsWith("jdbc:sqlited:") ||
+                url.startsWith("jdbc:sqlite:");
+
+        return "create table if not exists account(" +
+                "id integer not null primary key" + (isSqlited? ", ": " auto_increment, ") +
+                "name varchar(20) not null, " +
+                "balance decimal(12,1) not null default 0," +
+                "create_at datetime)";
+    }
+
+    public static void prepare(String url) throws Exception {
+        if (url == null) url = getTestUrl();
+        try (Connection c = DriverManager.getConnection(url);
+             Statement s = c.createStatement()) {
+            String sql = createAccountSQL(url);
+            s.executeUpdate("drop table if exists account");
+            s.executeUpdate(sql);
+            s.executeUpdate("delete from account");
+            s.executeUpdate("insert into account(id, name, balance, create_at) " +
+                    "values(1, 'Tom', 5000000, '2021-05-21 20:30:45.000')");
+        }
     }
 
     @Before

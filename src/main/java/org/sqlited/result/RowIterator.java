@@ -17,6 +17,7 @@
 package org.sqlited.result;
 
 import java.io.Serializable;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.Consumer;
@@ -35,6 +36,11 @@ public class RowIterator implements Iterator<Object[]>, Serializable {
         this.rows = rows;
         this.last = last;
         this.metaData = metaData;
+    }
+
+    public static RowIterator empty(ResultSetMetaData metaData) {
+        List<Object[]> rows = Collections.emptyList();
+        return new RowIterator(rows, true, metaData);
     }
 
     @Override
