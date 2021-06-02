@@ -141,8 +141,8 @@ public class AuthSocket extends Socket {
 
         // Send handshake packet
         final int serverVersion = Transfer.VERSION; // protocol version
-        ch.writeByte(serverVersion)
-                .writeByte(mCode)
+        ch.write(serverVersion)
+                .write(mCode)
                 .write(challenge)
                 .writeString(info)
                 .flush();
@@ -151,16 +151,16 @@ public class AuthSocket extends Socket {
         // -Format: version, auth-method, auth-data, user or null, client-info
         String loginTimeout = props.getProperty("loginTimeout");
         socket.setSoTimeout(Integer.decode(loginTimeout));
-        final int clientVersion = ch.readByte(true); // protocol version
+        final int clientVersion = ch.read(true); // protocol version
         if (serverVersion != clientVersion) {
             String s = "Protocol version error";
-            ch.writeError(s);
+            ch.sendError(s);
             throw new IOException(s);
         }
-        final int clientMethod = ch.readByte(true);
+        final int clientMethod = ch.read(true);
         if (clientMethod != mCode) {
             String s = "Unsupported client auth method: " + clientMethod;
-            ch.writeError(s);
+            ch.sendError(s);
             throw new IOException(s);
         }
         final byte[] authData = ch.readFully(16);
@@ -180,11 +180,11 @@ public class AuthSocket extends Socket {
         if (user.equals(loginUser) && Arrays.equals(digest, authData)) {
             String client = ch.readString();
             log.fine(() -> String.format("%s login", client));
-            ch.writeOK(0);
+            ch.sendOK(0);
         } else {
             String f = "Access denied for %s@%s";
             String s = String.format(f, loginUser, remote.getHostName());
-            ch.writeError(s);
+            ch.sendError(s);
             throw new IOException(s);
         }
         log.fine(() -> String.format("%s@%s login OK", user, remote.getHostName()));
@@ -202,12 +202,12 @@ public class AuthSocket extends Socket {
 
         // Handshake
         final int clientVersion = Transfer.VERSION;
-        int serverVersion = ch.readByte(true);
+        int serverVersion = ch.read(true);
         if (serverVersion != clientVersion) {
             s = "Unknown server protocol " + serverVersion;
             throw new IOException(s);
         }
-        int mCode = ch.readByte(true);
+        int mCode = ch.read(true);
         boolean mFound = false;
         for (Map.Entry<String, Byte> i: SocketUtils.METHODS.entrySet()) {
             if (mCode == i.getValue()) {
@@ -233,14 +233,14 @@ public class AuthSocket extends Socket {
         }
         byte[] authData = md5.digest();
         String user = props.getProperty("user");
-        ch.writeByte(clientVersion)
-                .writeByte(mCode)
+        ch.write(clientVersion)
+                .write(mCode)
                 .write(authData)
                 .writeString(user)
                 .writeString(client)
                 .flush();
         // - response
-        int result = ch.readByte(true);
+        int result = ch.read(true);
         if (Transfer.RESULT_ER == result) {
             s = ch.readString();
             ch.readString();

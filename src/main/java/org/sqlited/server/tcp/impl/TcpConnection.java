@@ -82,7 +82,7 @@ public class TcpConnection implements Protocol, Runnable, AutoCloseable {
         Transfer ch = this.ch;
 
         while (true) {
-            final int cmd = ch.readByte();
+            final int cmd = ch.read();
             if (cmd == -1) {
                 log.fine(() -> this + ": peer quit");
                 break;
@@ -127,12 +127,12 @@ public class TcpConnection implements Protocol, Runnable, AutoCloseable {
                         break;
                     default:
                         String s = "Unknown command: 0x" + toHexString(cmd);
-                        ch.writeError(s, "08000");
+                        ch.sendError(s, "08000");
                         close();
                         return;
                 }
             } catch (SQLException e) {
-                ch.writeError(e);
+                ch.sendError(e);
                 log.log(Level.FINE, "SQL error", e);
             }
         }
@@ -140,14 +140,14 @@ public class TcpConnection implements Protocol, Runnable, AutoCloseable {
 
     protected void processSetHoldability() throws IOException, SQLException {
         // In: holdability
-        int holdability = this.ch.readByte(true) & 0xFF;
+        int holdability = this.ch.read(true) & 0xFF;
         this.sqlConn.setHoldability(holdability);
         sendOK();
     }
 
     protected void processSetTxIsolation() throws IOException, SQLException {
         // In: level
-        int level = this.ch.readByte(true) & 0xFF;
+        int level = this.ch.read(true) & 0xFF;
         this.sqlConn.setTransactionIsolation(level);
         sendOK();
     }
@@ -167,7 +167,7 @@ public class TcpConnection implements Protocol, Runnable, AutoCloseable {
                 this.readonly = readonly;
                 sendOK();
             } else {
-                this.ch.writeError("Set readonly failure");
+                this.ch.sendError("Set readonly failure");
             }
         }
     }
@@ -252,7 +252,7 @@ public class TcpConnection implements Protocol, Runnable, AutoCloseable {
 
         TcpStatement ts = this.stmtMap.get(id);
         if (ts == null) {
-            ch.writeError("Statement has been closed");
+            ch.sendError("Statement has been closed");
         } else {
             ts.stmt.setFetchSize(n);
             ts.fetchRows();
@@ -269,7 +269,7 @@ public class TcpConnection implements Protocol, Runnable, AutoCloseable {
 
         TcpStatement ts = this.stmtMap.get(id);
         if (ts == null) {
-            ch.writeError("Statement has been closed");
+            ch.sendError("Statement has been closed");
             return;
         }
 
@@ -349,7 +349,7 @@ public class TcpConnection implements Protocol, Runnable, AutoCloseable {
             failed = false;
             return true;
         } catch (SQLException e) {
-            ch.writeError(e);
+            ch.sendError(e);
             return false;
         } finally {
             if (failed) close();
@@ -373,7 +373,7 @@ public class TcpConnection implements Protocol, Runnable, AutoCloseable {
             throws SQLException, IOException {
         status = getStatus(this.sqlConn, this.readonly, status);
         if ((status & 0x2) != 0x0) this.spMap.clear();
-        this.ch.writeOK(status, lastInsertId, affectedRows);
+        this.ch.sendOK(status, lastInsertId, affectedRows);
     }
 
     protected Statement getAuxStmt() throws SQLException {

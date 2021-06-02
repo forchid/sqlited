@@ -60,15 +60,15 @@ public class Transfer implements Protocol {
     }
 
     public boolean readBoolean() throws IOException {
-        int i = readByte(true);
+        int i = read(true);
         return i == 0x01;
     }
 
     public Transfer writeBoolean(boolean b) throws IOException {
-        return writeByte(b ? 0x01: 0x00);
+        return write(b ? 0x01: 0x00);
     }
 
-    public int readByte() throws IOException {
+    public int read() throws IOException {
         ByteBuffer buf = this.inBuffer;
 
         if (buf.hasRemaining()) {
@@ -86,15 +86,15 @@ public class Transfer implements Protocol {
         }
     }
 
-    public int readByte(boolean check) throws IOException {
-        int i = readByte();
+    public int read(boolean check) throws IOException {
+        int i = read();
         if (check && i == -1) throw new EOFException();
         return i;
     }
 
-    public Transfer writeByte(int i) throws IOException {
+    public Transfer write(int b) throws IOException {
         ByteBuffer buf = ensureOutBuffer(1);
-        buf.put((byte)i);
+        buf.put((byte)b);
         return this;
     }
 
@@ -231,20 +231,20 @@ public class Transfer implements Protocol {
     }
 
     public int readInt() throws IOException {
-        int b = readByte(true) & 0xff;
+        int b = read(true) & 0xff;
         int i = b & 0x7f;
 
         if (b > 0x7f) {
-            b = readByte(true) & 0xff;
+            b = read(true) & 0xff;
             i ^= (b & 0x7f) << 7;
             if (b > 0x7f) {
-                b = readByte(true) & 0xff;
+                b = read(true) & 0xff;
                 i ^= (b & 0x7f) << 14;
                 if (b > 0x7f) {
-                    b = readByte(true) & 0xff;
+                    b = read(true) & 0xff;
                     i ^= (b & 0x7f) << 21;
                     if (b > 0x7f) {
-                        b = readByte(true) & 0xff;
+                        b = read(true) & 0xff;
                         i ^= (b & 0x7f) << 28;
                         if (b > 0x7f) {
                             throw new IOException("Invalid int");
@@ -261,38 +261,38 @@ public class Transfer implements Protocol {
         i = (i << 1) ^ (i >> 31);
 
         if ((i & ~0x7F) != 0) {
-            writeByte((i | 0x80) & 0xFF);
+            write((i | 0x80) & 0xFF);
             i >>>= 7;
             if (i > 0x7F) {
-                writeByte((i | 0x80) & 0xFF);
+                write((i | 0x80) & 0xFF);
                 i >>>= 7;
                 if (i > 0x7F) {
-                    writeByte((i | 0x80) & 0xFF);
+                    write((i | 0x80) & 0xFF);
                     i >>>= 7;
                     if (i > 0x7F) {
-                        writeByte((i | 0x80) & 0xFF);
+                        write((i | 0x80) & 0xFF);
                         i >>>= 7;
                     }
                 }
             }
         }
 
-        writeByte(i);
+        write(i);
         return this;
     }
 
     public long readLong() throws IOException {
-        int b = readByte(true) & 0xff;
+        int b = read(true) & 0xff;
         int n = b & 0x7f;
         long l;
         if (b > 0x7f) {
-            b = readByte(true) & 0xff;
+            b = read(true) & 0xff;
             n ^= (b & 0x7f) << 7;
             if (b > 0x7f) {
-                b = readByte(true) & 0xff;
+                b = read(true) & 0xff;
                 n ^= (b & 0x7f) << 14;
                 if (b > 0x7f) {
-                    b = readByte(true) & 0xff;
+                    b = read(true) & 0xff;
                     n ^= (b & 0x7f) << 21;
                     if (b > 0x7f) {
                         l = decodeLong(n);
@@ -313,23 +313,23 @@ public class Transfer implements Protocol {
     }
 
     private long decodeLong(long l) throws IOException {
-        int b = readByte(true) & 0xff;
+        int b = read(true) & 0xff;
         l ^= (b & 0x7fL) << 28;
 
         if (b > 0x7f) {
-            b = readByte(true) & 0xff;
+            b = read(true) & 0xff;
             l ^= (b & 0x7fL) << 35;
             if (b > 0x7f) {
-                b = readByte(true) & 0xff;
+                b = read(true) & 0xff;
                 l ^= (b & 0x7fL) << 42;
                 if (b > 0x7f) {
-                    b = readByte(true) & 0xff;
+                    b = read(true) & 0xff;
                     l ^= (b & 0x7fL) << 49;
                     if (b > 0x7f) {
-                        b = readByte(true) & 0xff;
+                        b = read(true) & 0xff;
                         l ^= (b & 0x7fL) << 56;
                         if (b > 0x7f) {
-                            b = readByte(true) & 0xff;
+                            b = read(true) & 0xff;
                             l ^= (b & 0x7fL) << 63;
                             if (b > 0x7f) {
                                 throw new IOException("Invalid long");
@@ -346,31 +346,31 @@ public class Transfer implements Protocol {
     public Transfer writeLong(long n) throws IOException {
         n = (n << 1) ^ (n >> 63);
         if ((n & ~0x7FL) != 0) {
-            writeByte((byte) ((n | 0x80) & 0xFF));
+            write((byte) ((n | 0x80) & 0xFF));
             n >>>= 7;
             if (n > 0x7F) {
-                writeByte((byte) ((n | 0x80) & 0xFF));
+                write((byte) ((n | 0x80) & 0xFF));
                 n >>>= 7;
                 if (n > 0x7F) {
-                    writeByte((byte) ((n | 0x80) & 0xFF));
+                    write((byte) ((n | 0x80) & 0xFF));
                     n >>>= 7;
                     if (n > 0x7F) {
-                        writeByte((byte) ((n | 0x80) & 0xFF));
+                        write((byte) ((n | 0x80) & 0xFF));
                         n >>>= 7;
                         if (n > 0x7F) {
-                            writeByte((byte) ((n | 0x80) & 0xFF));
+                            write((byte) ((n | 0x80) & 0xFF));
                             n >>>= 7;
                             if (n > 0x7F) {
-                                writeByte((byte) ((n | 0x80) & 0xFF));
+                                write((byte) ((n | 0x80) & 0xFF));
                                 n >>>= 7;
                                 if (n > 0x7F) {
-                                    writeByte((byte) ((n | 0x80) & 0xFF));
+                                    write((byte) ((n | 0x80) & 0xFF));
                                     n >>>= 7;
                                     if (n > 0x7F) {
-                                        writeByte((byte) ((n | 0x80) & 0xFF));
+                                        write((byte) ((n | 0x80) & 0xFF));
                                         n >>>= 7;
                                         if (n > 0x7F) {
-                                            writeByte((byte) ((n | 0x80) & 0xFF));
+                                            write((byte) ((n | 0x80) & 0xFF));
                                             n >>>= 7;
                                         }
                                     }
@@ -381,48 +381,48 @@ public class Transfer implements Protocol {
                 }
             }
         }
-        return writeByte((byte)n);
+        return write((byte)n);
     }
 
-    public Transfer writeOK(int status) throws IOException {
-        return writeOK(status, 0, 0);
+    public Transfer sendOK(int status) throws IOException {
+        return sendOK(status, 0, 0);
     }
 
-    public Transfer writeOK(int status, long lastId, long affectedRows)
+    public Transfer sendOK(int status, long lastId, long affectedRows)
             throws IOException {
         // Format: OK, status, lastId, affectedRows
-        return writeByte(RESULT_OK)
+        return write(RESULT_OK)
                 .writeInt(status)
                 .writeLong(lastId)
                 .writeLong(affectedRows)
                 .flush();
     }
 
-    public Transfer writeError(String message) throws IOException {
-        return writeError(new SQLException(message));
+    public Transfer sendError(String message) throws IOException {
+        return sendError(new SQLException(message));
     }
 
-    public Transfer writeError(String message, String sqlState)
+    public Transfer sendError(String message, String sqlState)
             throws IOException {
-        return writeError(new SQLException(message, sqlState, 0));
+        return sendError(new SQLException(message, sqlState, 0));
     }
 
-    public Transfer writeError(String message, String sqlState, int vendorCode)
+    public Transfer sendError(String message, String sqlState, int vendorCode)
             throws IOException {
-        return writeError(new SQLException(message, sqlState, vendorCode));
+        return sendError(new SQLException(message, sqlState, vendorCode));
     }
 
-    public Transfer writeError(Throwable cause) throws IOException {
-        return writeError(new SQLException(cause));
+    public Transfer sendError(Throwable cause) throws IOException {
+        return sendError(new SQLException(cause));
     }
 
-    public Transfer writeError(SQLException e) throws IOException {
+    public Transfer sendError(SQLException e) throws IOException {
         String message = e.getMessage();
         String sqlState = e.getSQLState();
         int vendorCode = e.getErrorCode();
         // format: ER,message,sqlState,vendorCode
         return resetOutBuffer()
-                .writeByte(RESULT_ER)
+                .write(RESULT_ER)
                 .writeString(message)
                 .writeString(sqlState)
                 .writeInt(vendorCode)
@@ -430,7 +430,7 @@ public class Transfer implements Protocol {
     }
 
     public Object readArray() throws IOException {
-        int type = readByte(true);
+        int type = read(true);
         switch (type) {
             case TYPE_ARR_int:
                 return readIntArray();
@@ -450,17 +450,17 @@ public class Transfer implements Protocol {
 
     public Transfer writeArray(Object a) throws IOException {
         if (a == null) {
-            return writeByte(TYPE_ARR_Object).writeObjectArray(null);
+            return write(TYPE_ARR_Object).writeObjectArray(null);
         } else if (a instanceof String[]) {
-            return writeByte(TYPE_ARR_String).writeStringArray((String[])a);
+            return write(TYPE_ARR_String).writeStringArray((String[])a);
         } else if (a instanceof Object[]) {
-            return writeByte(TYPE_ARR_Object).writeObjectArray((Object[])a);
+            return write(TYPE_ARR_Object).writeObjectArray((Object[])a);
         } else if (a instanceof int[]) {
-            return writeByte(TYPE_ARR_int).writeIntArray((int[])a);
+            return write(TYPE_ARR_int).writeIntArray((int[])a);
         } else if (a instanceof double[]) {
-            return writeByte(TYPE_ARR_double).writeDoubleArray((double[])a);
+            return write(TYPE_ARR_double).writeDoubleArray((double[])a);
         } else if (a instanceof long[]) {
-            return writeByte(TYPE_ARR_long).writeLongArray((long[])a);
+            return write(TYPE_ARR_long).writeLongArray((long[])a);
         } else {
             throw new IOException("Unknown array type: " + a);
         }
@@ -507,16 +507,16 @@ public class Transfer implements Protocol {
 
     public Transfer writeObject(Object o) throws IOException {
         if (o == null) {
-            return writeByte(TYPE_OBJ_NULL);
+            return write(TYPE_OBJ_NULL);
         } else if (o instanceof Integer || o instanceof Long) {
             Number n = (Number) o;
-            return writeByte(TYPE_OBJ_INT).writeLong(n.longValue());
+            return write(TYPE_OBJ_INT).writeLong(n.longValue());
         } else if (o instanceof Double) {
-            return writeByte(TYPE_OBJ_REAL).writeDouble((double) o);
+            return write(TYPE_OBJ_REAL).writeDouble((double) o);
         } else if (o instanceof String) {
-            return writeByte(TYPE_OBJ_TEXT).writeString((String) o);
+            return write(TYPE_OBJ_TEXT).writeString((String) o);
         } else if (o instanceof byte[]) {
-            return writeByte(TYPE_OBJ_BLOB).writeBytes((byte[]) o);
+            return write(TYPE_OBJ_BLOB).writeBytes((byte[]) o);
         } else {
             throw new IOException("Unknown object type: " + o);
         }
@@ -555,7 +555,7 @@ public class Transfer implements Protocol {
     }
 
     public Object readObject() throws IOException {
-        int type = readByte(true);
+        int type = read(true);
         switch (type) {
             case TYPE_OBJ_INT:
                 return readLong();

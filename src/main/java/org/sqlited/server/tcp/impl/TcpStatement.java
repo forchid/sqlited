@@ -51,7 +51,7 @@ public class TcpStatement implements AutoCloseable {
         ResultSet rs = initResultSet();
         Transfer ch = conn.ch;
         int status = meta? 0x1: 0x0;
-        ch.writeByte(Transfer.RESULT_SET)
+        ch.write(Transfer.RESULT_SET)
                 .writeInt(status);
         boolean next = false;
         if (meta) next = writeResultSetMeta(rs);
@@ -81,7 +81,7 @@ public class TcpStatement implements AutoCloseable {
         ch.writeArray(null);
 
         int status = next? 0x01:0x00;
-        return ch.writeByte(status);
+        return ch.write(status);
     }
 
     protected boolean writeResultSetMeta(ResultSet rs) throws SQLException, IOException {
@@ -133,7 +133,7 @@ public class TcpStatement implements AutoCloseable {
         Transfer ch = this.conn.ch;
         int status = 0x1;
 
-        ch.writeByte(Transfer.RESULT_SET)
+        ch.write(Transfer.RESULT_SET)
                 .writeInt(status);
         writeResultSetMeta(meta)
                 .writeRows(rowItr)
@@ -147,7 +147,7 @@ public class TcpStatement implements AutoCloseable {
         int status = 0x1;
 
         initResultSet();
-        ch.writeByte(Transfer.RESULT_SET)
+        ch.write(Transfer.RESULT_SET)
                 .writeInt(status);
         writeResultSetMeta(meta)
                 .writeRows(false)
@@ -166,7 +166,7 @@ public class TcpStatement implements AutoCloseable {
         ch.writeArray(null);
 
         int status = 0x00;
-        return ch.writeByte(status);
+        return ch.write(status);
     }
 
     protected TcpStatement writeResultSetMeta(org.sqlited.result.ResultSetMetaData meta)

@@ -176,7 +176,7 @@ public class TcpServer implements Server {
                 int maxBuffer = config.getMaxBufferSize();
                 Transfer ch = new Transfer(conn, maxBuffer);
                 String s = "Too many connections";
-                ch.writeError(s, "08001");
+                ch.sendError(s, "08001");
             } catch (IOException ignore) {
                 // Ignore
             } finally {

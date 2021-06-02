@@ -50,7 +50,7 @@ public class JdbcTcpResultSet extends JdbcResultSet {
         try {
             int fetch = Transfer.CMD_FETCH_ROWS;
             int size = stmt.getFetchSize();
-            ch.writeByte(fetch)
+            ch.write(fetch)
                     .writeInt(stmt.id)
                     .writeInt(size)
                     .flush();

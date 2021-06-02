@@ -62,7 +62,7 @@ public class JdbcTcpConnection extends ConnectionAdapter {
     protected long[] readOK() throws SQLException {
         Transfer ch = this.ch;
         try {
-            int result = ch.readByte(true);
+            int result = ch.read(true);
             return readOK(result);
         } catch (IOException e) {
             String s = "Read server result error";
@@ -93,7 +93,7 @@ public class JdbcTcpConnection extends ConnectionAdapter {
             throws SQLException {
         Transfer ch = this.ch;
         try {
-            ch.writeByte(Transfer.CMD_CREATE_STMT)
+            ch.write(Transfer.CMD_CREATE_STMT)
                     .writeInt(rsType)
                     .writeInt(rsConcur)
                     .writeInt(rsHold)
@@ -125,7 +125,8 @@ public class JdbcTcpConnection extends ConnectionAdapter {
     public void setAutoCommit(boolean ac) throws SQLException {
         Transfer ch = this.ch;
         try {
-            ch.writeByte(Transfer.CMD_SET_AC).writeBoolean(ac)
+            ch.write(Transfer.CMD_SET_AC)
+                    .writeBoolean(ac)
                     .flush();
             readOK();
         } catch (IOException e) {
@@ -138,7 +139,7 @@ public class JdbcTcpConnection extends ConnectionAdapter {
     public void commit() throws SQLException {
         Transfer ch = this.ch;
         try {
-            ch.writeByte(Transfer.CMD_COMMIT).flush();
+            ch.write(Transfer.CMD_COMMIT).flush();
             readOK();
         } catch (IOException e) {
             String s = "Set autoCommit error";
@@ -160,7 +161,7 @@ public class JdbcTcpConnection extends ConnectionAdapter {
     protected void doRollback(Savepoint savepoint) throws SQLException {
         Transfer ch = this.ch;
         try {
-            ch.writeByte(Transfer.CMD_ROLLBACK);
+            ch.write(Transfer.CMD_ROLLBACK);
             if (savepoint == null) {
                 ch.writeArray(null);
             } else {
@@ -181,7 +182,7 @@ public class JdbcTcpConnection extends ConnectionAdapter {
     public Savepoint setSavepoint(String name) throws SQLException {
         Transfer ch = this.ch;
         try {
-            ch.writeByte(Transfer.CMD_SET_SP)
+            ch.write(Transfer.CMD_SET_SP)
                     .writeString(name)
                     .flush();
             long[] a = readOK();
@@ -200,7 +201,7 @@ public class JdbcTcpConnection extends ConnectionAdapter {
         try {
             int id = savepoint.getSavepointId();
             String name = savepoint.getSavepointName();
-            ch.writeByte(Transfer.CMD_REL_SP)
+            ch.write(Transfer.CMD_REL_SP)
                     .writeInt(id)
                     .writeString(name)
                     .flush();
@@ -215,7 +216,7 @@ public class JdbcTcpConnection extends ConnectionAdapter {
     public void setReadOnly(boolean readonly) throws SQLException {
         Transfer ch = this.ch;
         try {
-            ch.writeByte(Transfer.CMD_SET_RO)
+            ch.write(Transfer.CMD_SET_RO)
                     .writeBoolean(readonly)
                     .flush();
             readOK();
@@ -234,8 +235,8 @@ public class JdbcTcpConnection extends ConnectionAdapter {
     public void setTransactionIsolation(int level) throws SQLException {
         checkIsolation(level);
         try {
-            this.ch.writeByte(Transfer.CMD_SET_TI)
-                    .writeByte(level)
+            this.ch.write(Transfer.CMD_SET_TI)
+                    .write(level)
                     .flush();
             readOK();
         } catch (IOException e) {
@@ -248,8 +249,8 @@ public class JdbcTcpConnection extends ConnectionAdapter {
     public void setHoldability(int holdability) throws SQLException {
         checkHoldability(holdability);
         try {
-            this.ch.writeByte(Transfer.CMD_SET_HD)
-                    .writeByte(holdability)
+            this.ch.write(Transfer.CMD_SET_HD)
+                    .write(holdability)
                     .flush();
             readOK();
         } catch (IOException e) {
