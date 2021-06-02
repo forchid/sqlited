@@ -45,8 +45,7 @@ public class AuthSocket extends Socket {
     protected final long id;
     protected final Properties props;
     protected final boolean client;
-    private BufferedInputStream in;
-    private BufferedOutputStream out;
+    private boolean handshaked;
 
     public AuthSocket(Properties props, boolean client) {
         this.props = props;
@@ -87,31 +86,18 @@ public class AuthSocket extends Socket {
 
     @Override
     public InputStream getInputStream() throws IOException {
-        InputStream in = this.in;
-        if (in == null) {
-            String prop = this.props.getProperty("bufferSize");
-            int bufferSize = Integer.decode(prop);
-            InputStream is = super.getInputStream();
-            in = this.in = new BufferedInputStream(is, bufferSize);
-            if (!this.client) handshake();
-        }
-        return in;
+        if (!this.client && !this.handshaked) handshake();
+        return super.getInputStream();
     }
 
     @Override
     public OutputStream getOutputStream() throws IOException {
-        OutputStream out = this.out;
-        if (out == null) {
-            String prop = this.props.getProperty("bufferSize");
-            int bufferSize = Integer.decode(prop);
-            OutputStream os = super.getOutputStream();
-            out = this.out = new BufferedOutputStream(os, bufferSize);
-            if (!this.client && this.in == null) handshake();
-        }
-        return out;
+        if (!this.client && !this.handshaked) handshake();
+        return super.getOutputStream();
     }
 
     protected void handshake() throws IOException {
+        this.handshaked = true;
         handshake(this.props, this);
     }
 
@@ -148,7 +134,8 @@ public class AuthSocket extends Socket {
         String info = props.getProperty("server", "SQLited");
         String method = props.getProperty("method");
         final byte mCode = METHODS.get(method);
-        Transfer ch = new Transfer(socket);
+        String maxBuffer = props.getProperty("maxBufferSize");
+        Transfer ch = new Transfer(socket, Integer.decode(maxBuffer));
         final byte[] challenge = new byte[8];
         RANDOM.nextBytes(challenge);
 
@@ -208,15 +195,16 @@ public class AuthSocket extends Socket {
     static void login(Properties props, Socket socket) throws IOException {
         int soTimeout = socket.getSoTimeout();
 
-        String loginTimeout = props.getProperty("loginTimeout");
-        socket.setSoTimeout(Integer.decode(loginTimeout));
-        Transfer ch = new Transfer(socket);
+        String s = props.getProperty("loginTimeout");
+        socket.setSoTimeout(Integer.decode(s));
+        s = props.getProperty("maxBufferSize");
+        Transfer ch = new Transfer(socket, Integer.decode(s));
 
         // Handshake
         final int clientVersion = Transfer.VERSION;
         int serverVersion = ch.readByte(true);
         if (serverVersion != clientVersion) {
-            String s = "Unknown server protocol " + serverVersion;
+            s = "Unknown server protocol " + serverVersion;
             throw new IOException(s);
         }
         int mCode = ch.readByte(true);
@@ -254,7 +242,7 @@ public class AuthSocket extends Socket {
         // - response
         int result = ch.readByte(true);
         if (Transfer.RESULT_ER == result) {
-            String s = ch.readString();
+            s = ch.readString();
             ch.readString();
             ch.readInt();
             throw new IOException(s);

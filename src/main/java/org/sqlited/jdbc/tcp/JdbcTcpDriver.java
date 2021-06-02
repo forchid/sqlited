@@ -45,7 +45,7 @@ public class JdbcTcpDriver extends DriverAdapter {
             Socket socket = socketFactory.createSocket(host, port);
             boolean failed = true;
             try {
-                JdbcTcpConnection conn = new JdbcTcpConnection(socket);
+                JdbcTcpConnection conn = new JdbcTcpConnection(connProps, socket);
                 conn.openDB(url, info);
                 failed = false;
                 return conn;

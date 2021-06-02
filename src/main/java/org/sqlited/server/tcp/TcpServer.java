@@ -156,6 +156,7 @@ public class TcpServer implements Server {
     }
 
     protected void handle(Socket conn) {
+        Config config = getConfig();
         try {
             removeClosed();
 
@@ -167,13 +168,13 @@ public class TcpServer implements Server {
                 if (old == null) break;
             } while (true);
 
-            Config config = getConfig();
             TcpConnection tc = new TcpConnection(id, conn, config);
             this.workPool.execute(tc);
             this.connMap.put(id, tc);
         } catch (RejectedExecutionException e) {
             try {
-                Transfer ch = new Transfer(conn);
+                int maxBuffer = config.getMaxBufferSize();
+                Transfer ch = new Transfer(conn, maxBuffer);
                 String s = "Too many connections";
                 ch.writeError(s, "08001");
             } catch (IOException ignore) {

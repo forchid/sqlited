@@ -26,8 +26,6 @@ import org.sqlited.util.logging.LoggerFactory;
 
 import static java.lang.Integer.*;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.Socket;
 import java.sql.*;
 import static java.sql.Statement.*;
@@ -330,9 +328,8 @@ public class TcpConnection implements Protocol, Runnable, AutoCloseable {
     }
 
     protected boolean openDB() throws IOException {
-        InputStream in = this.socket.getInputStream();
-        OutputStream out = this.socket.getOutputStream();
-        Transfer ch = this.ch = new Transfer(in, out);
+        int maxBuffer = this.config.getMaxBufferSize();
+        Transfer ch = this.ch = new Transfer(this.socket, maxBuffer);
         String url = ch.readString();
         int n = ch.readInt();
         Properties info = new Properties();
@@ -394,6 +391,7 @@ public class TcpConnection implements Protocol, Runnable, AutoCloseable {
 
     @Override
     public void close() {
+        this.ch = null;
         this.stmtMap.clear();
         this.spMap.clear();
         IOUtils.close(this.auxStmt);

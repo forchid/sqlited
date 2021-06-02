@@ -29,19 +29,25 @@ import java.util.Properties;
 
 public class JdbcTcpConnection extends ConnectionAdapter {
 
+    protected final Properties props;
     protected final Socket socket;
     protected Transfer ch;
 
     protected int status;
 
-    public JdbcTcpConnection(Socket socket) {
+    public JdbcTcpConnection(Properties props, Socket socket) {
+        this.props = props;
         this.socket = socket;
     }
 
     public void openDB(String url, Properties info)
             throws SQLException, IOException {
         Transfer ch = this.ch;
-        if (ch == null) ch = this.ch = new Transfer(this.socket);
+        if (ch == null) {
+            String s = this.props.getProperty("maxBufferSize");
+            int maxBufferSize = Integer.decode(s);
+            ch = this.ch = new Transfer(this.socket, maxBufferSize);
+        }
         ch.writeString(url);
         ch.writeInt(info.size());
         for (Map.Entry<Object, Object> i: info.entrySet()) {

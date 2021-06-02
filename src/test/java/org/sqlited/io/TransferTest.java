@@ -41,9 +41,9 @@ public class TransferTest {
                     return this.buf[i++] & 0xff;
                 }
             };
-            Transfer ch = new Transfer(in, out);
+            Transfer ch = new Transfer(in, out, 8);
             try {
-                int j = ch.writeInt(i).readInt();
+                int j = ch.writeInt(i).flush().readInt();
                 assertEquals(i + " != " + j, i, j);
             } catch (IOException e) {
                 System.err.println("i = " + i);

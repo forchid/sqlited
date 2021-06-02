@@ -60,6 +60,7 @@ public class Config implements Cloneable {
     int readTimeout = Integer.decode(DEFAULT.getProperty("readTimeout", "1800000"));
     int tcpWorkPool = Integer.decode(DEFAULT.getProperty("tcp.workPool", "520"));
     int userMaxLength = Integer.decode(DEFAULT.getProperty("userMaxLength", "64"));
+    int maxBufferSize = Integer.decode(DEFAULT.getProperty("maxBufferSize", "16777216"));
 
     protected Config() {
 
@@ -215,6 +216,10 @@ public class Config implements Cloneable {
         return this.tcpWorkPool;
     }
 
+    public int getMaxBufferSize() {
+        return this.maxBufferSize;
+    }
+
     public Properties getConnProperties() {
         final Properties props = new Properties();
 
@@ -225,6 +230,7 @@ public class Config implements Cloneable {
         props.setProperty("loginTimeout", this.loginTimeout + "");
         props.setProperty("readTimeout", this.readTimeout + "");
         props.setProperty("userMaxLength", this.userMaxLength + "");
+        props.setProperty("maxBufferSize", this.maxBufferSize + "");
 
         return props;
     }

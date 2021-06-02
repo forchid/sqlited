@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.nio.ByteBuffer;
+import static java.nio.ByteBuffer.*;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
@@ -28,17 +30,33 @@ import java.sql.SQLException;
 public class Transfer implements Protocol {
 
     static final Charset CHARSET = StandardCharsets.UTF_8;
+    static final int IO_SIZE = 4096;
 
     protected final InputStream in;
     protected final OutputStream out;
+    protected final int maxBufferSize;
+    // It is important for performance and protocol integrity to
+    // read/write first a complete packet into buffer
+    private final ByteBuffer inBuffer;
+    private ByteBuffer outBuffer;
 
-    public Transfer(InputStream in, OutputStream out) {
+    public Transfer(InputStream in, OutputStream out, int maxBufferSize)
+        throws IllegalArgumentException {
+        if (maxBufferSize <= 0) {
+            String s = "maxBufferSize " + maxBufferSize;
+            throw new IllegalArgumentException(s);
+        }
+        int initSize = Math.min(IO_SIZE, maxBufferSize);
         this.in = in;
         this.out = out;
+        this.maxBufferSize = maxBufferSize;
+        this.inBuffer = allocate(initSize);
+        this.inBuffer.flip();
+        this.outBuffer = allocate(initSize);
     }
 
-    public Transfer(Socket socket) throws IOException {
-        this(socket.getInputStream(), socket.getOutputStream());
+    public Transfer(Socket socket, int maxBufferSize) throws IOException {
+        this(socket.getInputStream(), socket.getOutputStream(), maxBufferSize);
     }
 
     public boolean readBoolean() throws IOException {
@@ -51,38 +69,90 @@ public class Transfer implements Protocol {
     }
 
     public int readByte() throws IOException {
-        return this.in.read();
+        ByteBuffer buf = this.inBuffer;
+
+        if (buf.hasRemaining()) {
+            return (buf.get() & 0xff);
+        } else {
+            byte[] a = buf.array();
+            int i = this.in.read(a);
+            if (i == -1) {
+                buf.position(0).limit(0);
+                return i;
+            } else {
+                buf.position(0).limit(i);
+                return (buf.get() & 0xff);
+            }
+        }
     }
 
     public int readByte(boolean check) throws IOException {
-        int i = this.in.read();
+        int i = readByte();
         if (check && i == -1) throw new EOFException();
         return i;
     }
 
     public Transfer writeByte(int i) throws IOException {
-        this.out.write(i);
+        ByteBuffer buf = ensureOutBuffer(1);
+        buf.put((byte)i);
+        return this;
+    }
+
+    protected ByteBuffer ensureOutBuffer(int n) throws IOException {
+        ByteBuffer buf = this.outBuffer;
+
+        if (buf.remaining() < n) {
+            int cap = buf.capacity() + Math.max(IO_SIZE, n);
+            int max = this.maxBufferSize;
+            if (cap > max) {
+                cap = buf.position() + n;
+                if (cap > max) {
+                    throw new IOException("Output buffer overflow");
+                }
+            }
+            ByteBuffer newBuf = allocate(cap);
+            buf.flip();
+            newBuf.put(buf);
+            buf = this.outBuffer = newBuf;
+        }
+
+        return buf;
+    }
+
+    protected Transfer resetOutBuffer() {
+        ByteBuffer buf = this.outBuffer;
+        // Dirty data?
+        if (buf.position() > 0) buf.clear();
         return this;
     }
 
     public byte[] readFully(int n) throws IOException {
+        InputStream in = this.in;
         byte[] data = new byte[n];
+        ByteBuffer buf = this.inBuffer;
         int i = 0;
+
+        if (buf.hasRemaining()) {
+            int rem = buf.remaining();
+            i = Math.min(n, rem);
+            buf.get(data, 0, i);
+        }
         while (i < n) {
-            int x = this.in.read(data, i, n - i);
+            int x = in.read(data, i, n - i);
             if (x < 0) throw new EOFException();
             else i += x;
         }
+
         return data;
     }
 
     public Transfer write(byte[] data) throws IOException {
-        this.out.write(data);
-        return this;
+        return write(data, 0, data.length);
     }
 
     public Transfer write(byte[] data, int i, int n) throws IOException {
-        this.out.write(data, i, n);
+        ByteBuffer buf = ensureOutBuffer(n);
+        buf.put(data, i, n);
         return this;
     }
 
@@ -97,13 +167,10 @@ public class Transfer implements Protocol {
 
     public Transfer writeBytes(byte[] data) throws IOException {
         if (data == null) {
-            writeInt(-1);
+            return writeInt(-1);
         } else {
-            int n = data.length;
-            writeInt(n);
-            if (n > 0) this.out.write(data);
+            return writeBytes(data, 0, data.length);
         }
-        return this;
     }
 
     public Transfer writeBytes(byte[] data, int i, int n) throws IOException {
@@ -111,13 +178,24 @@ public class Transfer implements Protocol {
             writeInt(-1);
         } else {
             writeInt(n);
-            if (n > 0) this.out.write(data, i, n);
+            ByteBuffer buf = ensureOutBuffer(n);
+            buf.put(data, i, n);
         }
         return this;
     }
 
     public Transfer flush() throws IOException {
-        this.out.flush();
+        ByteBuffer buf = this.outBuffer;
+        byte[] data = buf.array();
+        int n = buf.position();
+        OutputStream out = this.out;
+
+        out.write(data, 0, n);
+        out.flush();
+        if (buf.capacity() > IO_SIZE)
+            this.outBuffer = allocate(IO_SIZE);
+        else buf.clear();
+
         return this;
     }
 
@@ -147,7 +225,7 @@ public class Transfer implements Protocol {
             writeInt(-1);
         } else {
             byte[] data = s.getBytes(CHARSET);
-            writeBytes(data);
+            writeBytes(data, 0, data.length);
         }
         return this;
     }
@@ -343,7 +421,8 @@ public class Transfer implements Protocol {
         String sqlState = e.getSQLState();
         int vendorCode = e.getErrorCode();
         // format: ER,message,sqlState,vendorCode
-        return writeByte(RESULT_ER)
+        return resetOutBuffer()
+                .writeByte(RESULT_ER)
                 .writeString(message)
                 .writeString(sqlState)
                 .writeInt(vendorCode)

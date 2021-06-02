@@ -57,7 +57,7 @@ public final class SocketUtils {
         PropsUtils.setIfAbsent(props, "connectTimeout", "10000");
         PropsUtils.setIfAbsent(props, "readTimeout", "1800000");
         PropsUtils.setIfAbsent(props, "tcpNoDelay", "true");
-        PropsUtils.setIfAbsent(props, "bufferSize", "4096");
+        PropsUtils.setIfAbsent(props, "maxBufferSize", "16777216"/*16m*/);
 
         return props;
     }
