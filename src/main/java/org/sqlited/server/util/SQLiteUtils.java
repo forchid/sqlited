@@ -21,12 +21,11 @@ import org.sqlite.SQLiteConnection;
 import org.sqlited.util.logging.LoggerFactory;
 
 import java.io.File;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.Properties;
 import java.util.logging.Logger;
+
+import static java.lang.String.format;
 
 public final class SQLiteUtils {
 
@@ -89,6 +88,24 @@ public final class SQLiteUtils {
         int hold = conn.getHoldability() & 0x03;
         status |= (hold << 6) | (level << 2) | (ac? 0x2: 0x0) | (readonly ? 0x1: 0x0);
         return status;
+    }
+
+    public static String autoIncrementColumn(Statement stmt, String database, String table)
+            throws SQLException {
+        // Query auto-generated column
+        String sql = format("pragma '%s'.table_info('%s')", database, table);
+
+        try (ResultSet rs = stmt.executeQuery(sql)) {
+            ResultSetMetaData md = rs.getMetaData();
+            while (rs.next()) {
+                int c = rs.findColumn("pk");
+                if (rs.getInt(c) == 1 && (md.isAutoIncrement(c)
+                        || "INTEGER".equalsIgnoreCase(md.getColumnTypeName(c)))) {
+                    return rs.getString("name");
+                }
+            }
+        }
+        return null;
     }
 
 }

@@ -158,15 +158,15 @@ public class JdbcTcpStatement extends StatementAdapter {
     }
 
     protected void readGeneratedKeys() throws SQLException {
-        Transfer ch = this.conn.ch;
+        JdbcTcpConnection conn = this.conn;
+        Transfer ch = conn.ch;
         try {
             log.fine("read auto-generated keys");
             int result = ch.read(true);
             if (Transfer.RESULT_SET == result) {
                 this.generatedKeys = readResultSet(this);
             } else {
-                String s = "Unexpected result type: " + result;
-                throw new SQLException(s, "08000");
+                conn.readOK(result);
             }
         } catch (IOException e) {
             String s = "Retrieves auto-generated keys error";

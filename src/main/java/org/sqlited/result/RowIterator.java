@@ -29,7 +29,7 @@ public class RowIterator implements Iterator<Object[]>, Serializable {
     protected final boolean last;
     protected final ResultSetMetaData metaData;
     // Row cursor
-    private transient int index = -1;
+    protected transient int index = -1;
 
     public RowIterator(List<Object[]> rows, boolean last,
                        ResultSetMetaData metaData) {
@@ -60,10 +60,8 @@ public class RowIterator implements Iterator<Object[]>, Serializable {
 
     @Override
     public void forEachRemaining(Consumer<? super Object[]> consumer) {
-        List<Object[]> rows = this.rows;
-        int n = rows.size();
-        while (++this.index < n) {
-            Object[] row = rows.get(this.index);
+        while (hasNext()) {
+            Object[] row = next();
             consumer.accept(row);
         }
     }

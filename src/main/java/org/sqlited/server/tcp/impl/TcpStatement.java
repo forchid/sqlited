@@ -159,7 +159,7 @@ public class TcpStatement implements AutoCloseable {
         Transfer ch = this.conn.ch;
 
         while (rowItr.hasNext()) {
-            Object[] row = rowItr.get();
+            Object[] row = rowItr.next();
             ch.writeArray(row);
         }
         // Row end
